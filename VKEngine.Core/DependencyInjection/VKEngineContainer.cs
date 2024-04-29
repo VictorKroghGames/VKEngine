@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using VKEngine.DependencyInjection;
 
-namespace VKEngine.Core.DependencyInjection;
+namespace VKEngine.DependencyInjection;
 
 internal sealed class VKEngineContainer(IServiceProvider serviceProvider) : IVKEngineContainer
 {

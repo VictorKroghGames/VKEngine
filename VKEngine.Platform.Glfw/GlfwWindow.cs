@@ -4,7 +4,7 @@ namespace VKEngine.Platform.Glfw;
 
 internal sealed class GlfwWindow : IWindow
 {
-    private IntPtr windowHandle;
+    internal IntPtr windowHandle;
 
     public bool IsRunning => GLFW.WindowShouldClose(windowHandle) is false;
 

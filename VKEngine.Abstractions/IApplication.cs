@@ -1,4 +1,4 @@
-﻿namespace VKEngine.Core;
+﻿namespace VKEngine;
 
 public interface IApplication : IDisposable
 {

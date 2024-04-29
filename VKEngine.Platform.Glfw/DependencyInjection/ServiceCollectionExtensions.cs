@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddGlfwPlatformModule(this IServiceCollection services)
     {
         services.AddScoped<IWindow, GlfwWindow>();
+        services.AddScoped<IInput, GlfwInput>();
 
         return services;
     }

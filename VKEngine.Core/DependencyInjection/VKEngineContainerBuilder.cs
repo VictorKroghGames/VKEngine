@@ -1,8 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using VKEngine.DependencyInjection;
 using VKEngine.Platform;
 
-namespace VKEngine.Core.DependencyInjection;
+namespace VKEngine.DependencyInjection;
 
 internal sealed class VKEngineContainerBuilder<TApplication> : IVKEngineContainerBuilder
     where TApplication : class, IApplication

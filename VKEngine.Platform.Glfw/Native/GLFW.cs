@@ -15,4 +15,6 @@ internal partial class GLFW
     public static void SwapBuffers(IntPtr window) => Native.glfwSwapBuffers(window);
 
     public static void PollEvents() => Native.glfwPollEvents();
+
+    public static int GetKey(IntPtr window, int key) => Native.glfwGetKey(window, key);
 }

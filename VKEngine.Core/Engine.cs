@@ -1,5 +1,4 @@
-﻿using VKEngine.Core.DependencyInjection;
-using VKEngine.DependencyInjection;
+﻿using VKEngine.DependencyInjection;
 
 namespace VKEngine.Core;
 
