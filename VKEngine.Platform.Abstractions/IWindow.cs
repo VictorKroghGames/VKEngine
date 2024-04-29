@@ -6,4 +6,6 @@ public interface IWindow : IDisposable
 
     void Initialize();
     void Update();
+
+    IEnumerable<string> GetRequiredInstanceExtensions();
 }

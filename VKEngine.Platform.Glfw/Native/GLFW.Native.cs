@@ -45,9 +45,17 @@ internal partial class GLFW
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         public static partial void glfwPollEvents();
 
+        [LibraryImport(LibraryName, EntryPoint = "glfwWindowHint")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial void glfwWindowHint([MarshalAs(UnmanagedType.I4)] int hint, [MarshalAs(UnmanagedType.I4)] int value);
+
         [LibraryImport(LibraryName, EntryPoint = "glfwGetKey")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         [return: MarshalAs(UnmanagedType.I4)]
         public static partial int glfwGetKey(IntPtr window, [MarshalAs(UnmanagedType.I4)] int key);
+
+        [LibraryImport(LibraryName, EntryPoint = "glfwGetRequiredInstanceExtensions")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial IntPtr glfwGetRequiredInstanceExtensions(out uint count);
     }
 }

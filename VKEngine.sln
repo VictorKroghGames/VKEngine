@@ -7,13 +7,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sandbox", "Sandbox\Sandbox.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Platform.Glfw", "VKEngine.Platform.Glfw\VKEngine.Platform.Glfw.csproj", "{D803C5A0-74B8-4004-B2AC-F606A0270269}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Platform", "VKEngine.Platform\VKEngine.Platform.csproj", "{B1D7F85E-9A1D-442F-9D99-70E1DAB91F1E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Platform", "VKEngine.Platform\VKEngine.Platform.csproj", "{B1D7F85E-9A1D-442F-9D99-70E1DAB91F1E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Platform.Abstractions", "VKEngine.Platform.Abstractions\VKEngine.Platform.Abstractions.csproj", "{61F73A71-9EE3-489F-94AB-37CE57B7E7E8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Platform.Abstractions", "VKEngine.Platform.Abstractions\VKEngine.Platform.Abstractions.csproj", "{61F73A71-9EE3-489F-94AB-37CE57B7E7E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Core", "VKEngine.Core\VKEngine.Core.csproj", "{E90E7447-39ED-4D58-A483-1D2E2B0A72E1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Core", "VKEngine.Core\VKEngine.Core.csproj", "{E90E7447-39ED-4D58-A483-1D2E2B0A72E1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Abstractions", "VKEngine.Abstractions\VKEngine.Abstractions.csproj", "{563D389F-63B7-47FF-8B5A-71939B86B951}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Abstractions", "VKEngine.Abstractions\VKEngine.Abstractions.csproj", "{563D389F-63B7-47FF-8B5A-71939B86B951}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Graphics", "VKEngine.Graphics\VKEngine.Graphics.csproj", "{FE03EEEC-A7D5-457D-8DE6-67FDC6C5635A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Graphics.Vulkan", "VKEngine.Graphics.Vulkan\VKEngine.Graphics.Vulkan.csproj", "{33ACE3D6-86A7-4E19-A7D4-BEB304ABD8F8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Graphics.Abstractions", "VKEngine.Graphics.Abstractions\VKEngine.Graphics.Abstractions.csproj", "{C7064DD0-461D-4F66-889E-F8F548E60931}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +51,18 @@ Global
 		{563D389F-63B7-47FF-8B5A-71939B86B951}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{563D389F-63B7-47FF-8B5A-71939B86B951}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{563D389F-63B7-47FF-8B5A-71939B86B951}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE03EEEC-A7D5-457D-8DE6-67FDC6C5635A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE03EEEC-A7D5-457D-8DE6-67FDC6C5635A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE03EEEC-A7D5-457D-8DE6-67FDC6C5635A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE03EEEC-A7D5-457D-8DE6-67FDC6C5635A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33ACE3D6-86A7-4E19-A7D4-BEB304ABD8F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33ACE3D6-86A7-4E19-A7D4-BEB304ABD8F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33ACE3D6-86A7-4E19-A7D4-BEB304ABD8F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33ACE3D6-86A7-4E19-A7D4-BEB304ABD8F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7064DD0-461D-4F66-889E-F8F548E60931}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7064DD0-461D-4F66-889E-F8F548E60931}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7064DD0-461D-4F66-889E-F8F548E60931}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7064DD0-461D-4F66-889E-F8F548E60931}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

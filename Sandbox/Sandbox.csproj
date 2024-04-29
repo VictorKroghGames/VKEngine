@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VKEngine.Core\VKEngine.Core.csproj" />
+    <ProjectReference Include="..\VKEngine.Graphics\VKEngine.Graphics.csproj" />
     <ProjectReference Include="..\VKEngine.Platform\VKEngine.Platform.csproj" />
   </ItemGroup>
 

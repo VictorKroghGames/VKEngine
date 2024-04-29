@@ -2,6 +2,11 @@
 
 internal partial class GLFW
 {
+    public const int GLFW_RESIZABLE = 0x00020003;
+    public const int GLFW_CLIENT_API = 0x00022001;
+    public const int GLFW_FALSE = 0;
+    public const int GLFW_NO_API = 0;
+
     public static bool Init() => Native.glfwInit();
     public static void Terminate() => Native.glfwTerminate();
 
@@ -16,5 +21,9 @@ internal partial class GLFW
 
     public static void PollEvents() => Native.glfwPollEvents();
 
+    internal static void WindowHint(int hint, int value) => Native.glfwWindowHint(hint, value);
+
     public static int GetKey(IntPtr window, int key) => Native.glfwGetKey(window, key);
+
+    public static IntPtr GetRequiredInstanceExtensions(out uint count) => Native.glfwGetRequiredInstanceExtensions(out count);
 }
