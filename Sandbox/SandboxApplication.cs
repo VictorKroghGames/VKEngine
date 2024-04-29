@@ -1,9 +1,20 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using VKEngine;
 using VKEngine.Platform;
 
 internal sealed class SandboxApplication(IWindow window, IInput input) : IApplication
 {
+    [DllImport("opengl32.dll", SetLastError = true)]
+    public static extern void glClear(uint mask);
+
+    [DllImport("opengl32.dll", SetLastError = true)]
+    public static extern void glClearColor(float red, float green, float blue, float alpha);
+
+    public const uint GL_DEPTH_BUFFER_BIT = 0x00000100;
+    public const uint GL_STENCIL_BUFFER_BIT = 0x00000400;
+    public const uint GL_COLOR_BUFFER_BIT = 0x00004000;
+
     private static ConcurrentQueue<Action> actionQueue = new();
 
     private bool isRunning = true;
@@ -34,6 +45,9 @@ internal sealed class SandboxApplication(IWindow window, IInput input) : IApplic
             {
                 actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
             }
+
+            glClear(GL_COLOR_BUFFER_BIT);
+            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
             window.Update();
             isRunning = window.IsRunning;
