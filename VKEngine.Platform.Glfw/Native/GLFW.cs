@@ -24,6 +24,4 @@ internal partial class GLFW
     internal static void WindowHint(int hint, int value) => Native.glfwWindowHint(hint, value);
 
     public static int GetKey(IntPtr window, int key) => Native.glfwGetKey(window, key);
-
-    public static IntPtr GetRequiredInstanceExtensions(out uint count) => Native.glfwGetRequiredInstanceExtensions(out count);
 }

@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using VKEngine.Platform.Glfw.Native;
+﻿using VKEngine.Platform.Glfw.Native;
 
 namespace VKEngine.Platform.Glfw;
 
@@ -8,6 +7,11 @@ internal sealed class GlfwWindow : IWindow
     internal IntPtr windowHandle;
 
     public bool IsRunning => GLFW.WindowShouldClose(windowHandle) is false;
+
+    public int Width => 800;
+    public int Height => 600;
+
+    public nint NativeWindowHandle => windowHandle;
 
     public void Initialize()
     {
@@ -31,8 +35,13 @@ internal sealed class GlfwWindow : IWindow
         GLFW.MakeContextCurrent(windowHandle);
     }
 
+    public void Shutdown()
+    {
+    }
+
     public void Dispose()
     {
+        Shutdown();
         // Destroy window
 
         GLFW.Terminate();
@@ -45,32 +54,32 @@ internal sealed class GlfwWindow : IWindow
         GLFW.PollEvents();
     }
 
-    public IEnumerable<string> GetRequiredInstanceExtensions()
-    {
-        var extensionsPtr = GLFW.GetRequiredInstanceExtensions(out var count);
-        if (extensionsPtr == IntPtr.Zero)
-        {
-            return Enumerable.Empty<string>();
-        }
+    //public IEnumerable<string> GetRequiredInstanceExtensions()
+    //{
+    //    var extensionsPtr = GLFW.GetRequiredInstanceExtensions(out var count);
+    //    if (extensionsPtr == IntPtr.Zero)
+    //    {
+    //        return Enumerable.Empty<string>();
+    //    }
 
-        if (count == 0)
-        {
-            return Enumerable.Empty<string>();
-        }
+    //    if (count == 0)
+    //    {
+    //        return Enumerable.Empty<string>();
+    //    }
 
-        var extensions = new string[count];
-        var offset = 0;
-        for (var i = 0; i < count; i++, offset += IntPtr.Size)
-        {
-            var p = Marshal.ReadIntPtr(extensionsPtr, offset);
-            var extension = Marshal.PtrToStringAnsi(p);
-            if(string.IsNullOrWhiteSpace(extension))
-            {
-                continue;
-            }
-            extensions[i] = extension;
-        }
+    //    var extensions = new string[count];
+    //    var offset = 0;
+    //    for (var i = 0; i < count; i++, offset += IntPtr.Size)
+    //    {
+    //        var p = Marshal.ReadIntPtr(extensionsPtr, offset);
+    //        var extension = Marshal.PtrToStringAnsi(p);
+    //        if(string.IsNullOrWhiteSpace(extension))
+    //        {
+    //            continue;
+    //        }
+    //        extensions[i] = extension;
+    //    }
 
-        return extensions;
-    }
+    //    return extensions;
+    //}
 }

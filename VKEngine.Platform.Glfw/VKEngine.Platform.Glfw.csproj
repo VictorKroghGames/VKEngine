@@ -12,6 +12,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\VKEngine.Abstractions\VKEngine.Abstractions.csproj" />
 	  <ProjectReference Include="..\VKEngine.Platform.Abstractions\VKEngine.Platform.Abstractions.csproj" />
 	</ItemGroup>
 
