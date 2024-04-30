@@ -53,33 +53,4 @@ internal sealed class GlfwWindow : IWindow
 
         GLFW.PollEvents();
     }
-
-    //public IEnumerable<string> GetRequiredInstanceExtensions()
-    //{
-    //    var extensionsPtr = GLFW.GetRequiredInstanceExtensions(out var count);
-    //    if (extensionsPtr == IntPtr.Zero)
-    //    {
-    //        return Enumerable.Empty<string>();
-    //    }
-
-    //    if (count == 0)
-    //    {
-    //        return Enumerable.Empty<string>();
-    //    }
-
-    //    var extensions = new string[count];
-    //    var offset = 0;
-    //    for (var i = 0; i < count; i++, offset += IntPtr.Size)
-    //    {
-    //        var p = Marshal.ReadIntPtr(extensionsPtr, offset);
-    //        var extension = Marshal.PtrToStringAnsi(p);
-    //        if(string.IsNullOrWhiteSpace(extension))
-    //        {
-    //            continue;
-    //        }
-    //        extensions[i] = extension;
-    //    }
-
-    //    return extensions;
-    //}
 }
