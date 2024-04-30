@@ -429,14 +429,14 @@ internal sealed unsafe class VulkanRenderer(IWindow window) : IRenderer
         vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface, ref presentModeCount, out presentModes[0]);
 
         VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR;
-        if (presentModes.Contains(VkPresentModeKHR.MailboxKHR))
-        {
-            presentMode = VkPresentModeKHR.MailboxKHR;
-        }
-        else if (presentModes.Contains(VkPresentModeKHR.ImmediateKHR))
-        {
-            presentMode = VkPresentModeKHR.ImmediateKHR;
-        }
+        //if (presentModes.Contains(VkPresentModeKHR.MailboxKHR))
+        //{
+        //    presentMode = VkPresentModeKHR.MailboxKHR;
+        //}
+        //else if (presentModes.Contains(VkPresentModeKHR.ImmediateKHR))
+        //{
+        //    presentMode = VkPresentModeKHR.ImmediateKHR;
+        //}
 
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
         uint imageCount = surfaceCapabilities.minImageCount + 1;
