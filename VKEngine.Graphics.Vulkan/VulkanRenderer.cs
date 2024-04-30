@@ -77,7 +77,7 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
     }
 }
 
-internal sealed unsafe class VulkanRenderer(IWindow window) : IRenderer
+internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanSwapChain swapChain) : IRenderer
 {
     private VkInstance _instance;
     private VkPhysicalDevice _physicalDevice;
@@ -144,6 +144,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window) : IRenderer
 
         CreateInstance();
         CreatePlatformWindow();
+        vulkanPhysicalDevice.Initialize(_instance);
         CreateSurface();
         CreatePhysicalDevice();
         CreateLogicalDevice();
