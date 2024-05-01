@@ -1,10 +1,9 @@
-﻿using System.Text;
-using Vulkan;
+﻿using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal struct QueueFamilyIndex
+public struct QueueFamilyIndex
 {
     public uint Graphics { get; set; }
     public uint Present { get; set; }
@@ -12,7 +11,12 @@ internal struct QueueFamilyIndex
 
 public interface IVulkanPhysicalDevice
 {
+    bool IsInitialized { get; }
+
+    QueueFamilyIndex QueueFamilyIndices { get; }
     void Initialize(VkInstance vkInstance);
+
+    TRawDataType GetRaw<TRawDataType>();
 }
 
 internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
@@ -21,6 +25,10 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
     private VkPhysicalDeviceProperties physicalDeviceProperties;
     private VkPhysicalDeviceFeatures physicalDeviceFeatures;
     private QueueFamilyIndex queueFamilyIndices;
+    private bool isInitialized = false;
+
+    public bool IsInitialized => isInitialized;
+    public QueueFamilyIndex QueueFamilyIndices => queueFamilyIndices;
 
     public void Initialize(VkInstance vkInstance)
     {
@@ -37,6 +45,8 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
         GetPhysicalDevicePropertiesAndFeaturesUnsafe();
 
         GetQueueFamiliesUnsafe();
+
+        isInitialized = true;
     }
 
     private unsafe VkPhysicalDevice[] GetVkPhysicalDevicesUnsafe(VkInstance vkInstance)
@@ -114,5 +124,10 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
         }
 
         queueFamilyIndices.Present = queueFamilyIndices.Graphics;
+    }
+
+    public TRawDataType GetRaw<TRawDataType>()
+    {
+        return (TRawDataType)(object)physicalDevice;
     }
 }
