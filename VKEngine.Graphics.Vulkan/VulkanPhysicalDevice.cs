@@ -13,21 +13,22 @@ public interface IVulkanPhysicalDevice
 {
     bool IsInitialized { get; }
 
+    VkPhysicalDevice PhysicalDevice { get; }
     QueueFamilyIndex QueueFamilyIndices { get; }
-    void Initialize(VkInstance vkInstance);
 
-    TRawDataType GetRaw<TRawDataType>();
+    void Initialize(VkInstance vkInstance);
 }
 
 internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
 {
-    private VkPhysicalDevice physicalDevice = VkPhysicalDevice.Null;
+    internal VkPhysicalDevice physicalDevice = VkPhysicalDevice.Null;
     private VkPhysicalDeviceProperties physicalDeviceProperties;
     private VkPhysicalDeviceFeatures physicalDeviceFeatures;
     private QueueFamilyIndex queueFamilyIndices;
     private bool isInitialized = false;
 
     public bool IsInitialized => isInitialized;
+    public VkPhysicalDevice PhysicalDevice => physicalDevice;
     public QueueFamilyIndex QueueFamilyIndices => queueFamilyIndices;
 
     public void Initialize(VkInstance vkInstance)
@@ -124,10 +125,5 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
         }
 
         queueFamilyIndices.Present = queueFamilyIndices.Graphics;
-    }
-
-    public TRawDataType GetRaw<TRawDataType>()
-    {
-        return (TRawDataType)(object)physicalDevice;
     }
 }

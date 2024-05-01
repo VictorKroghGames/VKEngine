@@ -6,12 +6,27 @@ namespace VKEngine.Graphics.Vulkan;
 
 public interface IVulkanLogicalDevice
 {
+    bool IsInitialized { get; }
+
+    VkDevice Device { get; }
+    VkQueue GraphicsQueue { get; }
+    VkQueue PresentQueue { get; }
+
     void Initialize();
 }
 
 internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDevice) : IVulkanLogicalDevice
 {
     private VkDevice device;
+    private VkQueue graphicsQueue;
+    private VkQueue presentQueue;
+    private bool isInitialized = false;
+
+    public bool IsInitialized => isInitialized;
+
+    public VkDevice Device => device;
+    public VkQueue GraphicsQueue => graphicsQueue;
+    public VkQueue PresentQueue => presentQueue;
 
     public unsafe void Initialize()
     {
@@ -58,14 +73,14 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
             deviceCreateInfo.enabledExtensionCount = 1;
             deviceCreateInfo.ppEnabledExtensionNames = &extensionNames;
 
-            var physicalDevice = vulkanPhysicalDevice.GetRaw<VkPhysicalDevice>();
+            var physicalDevice = ((VulkanPhysicalDevice)vulkanPhysicalDevice).physicalDevice;
 
             vkCreateDevice(physicalDevice, ref deviceCreateInfo, null, out device);
         }
 
-        vkGetDeviceQueue(_device, _graphicsQueueIndex, 0, out _graphicsQueue);
-        VkQueue q;
-        vkGetDeviceQueue(_device, _presentQueueIndex, 0, out q);
-        _presentQueue = q;
+        vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Graphics, 0, out graphicsQueue);
+        vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Present, 0, out presentQueue);
+
+        isInitialized = true;
     }
 }

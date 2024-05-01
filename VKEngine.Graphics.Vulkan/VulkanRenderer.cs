@@ -80,14 +80,6 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
 internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice,IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain swapChain) : IRenderer
 {
     private VkInstance _instance;
-    private VkPhysicalDevice _physicalDevice;
-    private VkPhysicalDeviceProperties _physicalDeviceProperties;
-    private VkPhysicalDeviceFeatures _physicalDeviceFeatures;
-    private uint _graphicsQueueIndex;
-    private uint _presentQueueIndex;
-    private VkDevice _device;
-    private VkQueue _graphicsQueue;
-    private VkQueue _presentQueue;
     private VkSurfaceKHR _surface;
     private VkPipelineLayout _pipelineLayout;
     private VkRenderPass _renderPass;
@@ -143,12 +135,9 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         }
 
         CreateInstance();
-        CreatePlatformWindow();
+        CreateSurface();
         vulkanPhysicalDevice.Initialize(_instance);
         vulkanLogicalDevice.Initialize();
-        CreateSurface();
-        CreatePhysicalDevice();
-        CreateLogicalDevice();
         CreateSwapchain();
         CreateImageViews();
         CreateRenderPass();
@@ -203,7 +192,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     private void DrawFrame()
     {
         uint imageIndex = 0;
-        VkResult result = vkAcquireNextImageKHR(_device, _swapchain, ulong.MaxValue, _imageAvailableSemaphore, VkFence.Null, ref imageIndex);
+        VkResult result = vkAcquireNextImageKHR(vulkanLogicalDevice.Device, _swapchain, ulong.MaxValue, _imageAvailableSemaphore, VkFence.Null, ref imageIndex);
         if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR)
         {
             RecreateSwapChain();
@@ -225,7 +214,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         VkSemaphore signalSemaphore = _renderCompleteSemaphore;
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &signalSemaphore;
-        vkQueueSubmit(_graphicsQueue, 1, &submitInfo, VkFence.Null);
+        vkQueueSubmit(vulkanLogicalDevice.GraphicsQueue, 1, &submitInfo, VkFence.Null);
 
         VkPresentInfoKHR presentInfo = VkPresentInfoKHR.New();
         presentInfo.waitSemaphoreCount = 1;
@@ -236,7 +225,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         presentInfo.pSwapchains = &swapchain;
         presentInfo.pImageIndices = &imageIndex;
 
-        vkQueuePresentKHR(_presentQueue, ref presentInfo);
+        vkQueuePresentKHR(vulkanLogicalDevice.PresentQueue, ref presentInfo);
     }
 
     private void CreateInstance()
@@ -283,109 +272,6 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         }
     }
 
-    private unsafe void CreatePhysicalDevice()
-    {
-        uint deviceCount = 0;
-        vkEnumeratePhysicalDevices(_instance, ref deviceCount, null);
-        if (deviceCount == 0)
-        {
-            throw new InvalidOperationException("No physical devices exist.");
-        }
-
-        vkEnumeratePhysicalDevices(_instance, ref deviceCount, ref _physicalDevice);
-        vkGetPhysicalDeviceProperties(_physicalDevice, out _physicalDeviceProperties);
-        string deviceName;
-        fixed (byte* utf8NamePtr = _physicalDeviceProperties.deviceName)
-        {
-            deviceName = Encoding.UTF8.GetString(utf8NamePtr, (int)MaxPhysicalDeviceNameSize);
-        }
-
-        vkGetPhysicalDeviceFeatures(_physicalDevice, out _physicalDeviceFeatures);
-
-        Console.WriteLine($"Using device: {deviceName}");
-    }
-
-    private unsafe void CreateLogicalDevice()
-    {
-        GetQueueFamilyIndices();
-
-        HashSet<uint> familyIndices = new HashSet<uint> { _graphicsQueueIndex, _presentQueueIndex };
-        RawList<VkDeviceQueueCreateInfo> queueCreateInfos = new RawList<VkDeviceQueueCreateInfo>();
-
-        foreach (uint index in familyIndices)
-        {
-            VkDeviceQueueCreateInfo queueCreateInfo = VkDeviceQueueCreateInfo.New();
-            queueCreateInfo.queueFamilyIndex = _graphicsQueueIndex;
-            queueCreateInfo.queueCount = 1;
-            float priority = 1f;
-            queueCreateInfo.pQueuePriorities = &priority;
-            queueCreateInfos.Add(queueCreateInfo);
-        }
-
-        VkPhysicalDeviceFeatures deviceFeatures = new VkPhysicalDeviceFeatures();
-
-        VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New();
-
-        fixed (VkDeviceQueueCreateInfo* qciPtr = &queueCreateInfos.Items[0])
-        {
-            deviceCreateInfo.pQueueCreateInfos = qciPtr;
-            deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.Count;
-
-            deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-
-            byte* layerNames = Strings.StandardValidationLayerName;
-            deviceCreateInfo.enabledLayerCount = 1;
-            deviceCreateInfo.ppEnabledLayerNames = &layerNames;
-
-            byte* extensionNames = Strings.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-            deviceCreateInfo.enabledExtensionCount = 1;
-            deviceCreateInfo.ppEnabledExtensionNames = &extensionNames;
-
-            vkCreateDevice(_physicalDevice, ref deviceCreateInfo, null, out _device);
-        }
-
-        vkGetDeviceQueue(_device, _graphicsQueueIndex, 0, out _graphicsQueue);
-        VkQueue q;
-        vkGetDeviceQueue(_device, _presentQueueIndex, 0, out q);
-        _presentQueue = q;
-    }
-
-    private void GetQueueFamilyIndices()
-    {
-        uint queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, ref queueFamilyCount, null);
-        VkQueueFamilyProperties[] qfp = new VkQueueFamilyProperties[queueFamilyCount];
-        vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, ref queueFamilyCount, out qfp[0]);
-
-        bool foundGraphics = false;
-        bool foundPresent = false;
-
-        for (uint i = 0; i < qfp.Length; i++)
-        {
-            if ((qfp[i].queueFlags & VkQueueFlags.Graphics) != 0)
-            {
-                _graphicsQueueIndex = i;
-                foundGraphics = true;
-            }
-
-            vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _surface, out VkBool32 presentSupported);
-            if (presentSupported)
-            {
-                _presentQueueIndex = i;
-                foundPresent = true;
-            }
-
-            if (foundGraphics && foundPresent)
-            {
-                break;
-            }
-        }
-    }
-
-    private void CreatePlatformWindow()
-    {
-    }
-
     private void CreateSurface()
     {
         var result = GLFW.CreateWindowSurface(_instance.Handle, window.NativeWindowHandle, IntPtr.Zero, out var surfacePtr);
@@ -400,9 +286,9 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     private void CreateSwapchain()
     {
         uint surfaceFormatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, ref surfaceFormatCount, null);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref surfaceFormatCount, null);
         VkSurfaceFormatKHR[] formats = new VkSurfaceFormatKHR[surfaceFormatCount];
-        vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, ref surfaceFormatCount, out formats[0]);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref surfaceFormatCount, out formats[0]);
 
         VkSurfaceFormatKHR surfaceFormat = new VkSurfaceFormatKHR();
         if (formats.Length == 1 && formats[0].format == VkFormat.Undefined)
@@ -426,21 +312,21 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         }
 
         uint presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface, ref presentModeCount, null);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref presentModeCount, null);
         VkPresentModeKHR[] presentModes = new VkPresentModeKHR[presentModeCount];
-        vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface, ref presentModeCount, out presentModes[0]);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref presentModeCount, out presentModes[0]);
 
         VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR;
-        //if (presentModes.Contains(VkPresentModeKHR.MailboxKHR))
-        //{
-        //    presentMode = VkPresentModeKHR.MailboxKHR;
-        //}
-        //else if (presentModes.Contains(VkPresentModeKHR.ImmediateKHR))
-        //{
-        //    presentMode = VkPresentModeKHR.ImmediateKHR;
-        //}
+        if (presentModes.Contains(VkPresentModeKHR.MailboxKHR))
+        {
+            presentMode = VkPresentModeKHR.MailboxKHR;
+        }
+        else if (presentModes.Contains(VkPresentModeKHR.ImmediateKHR))
+        {
+            presentMode = VkPresentModeKHR.ImmediateKHR;
+        }
 
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_physicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
         uint imageCount = surfaceCapabilities.minImageCount + 1;
 
         VkSwapchainCreateInfoKHR sci = VkSwapchainCreateInfoKHR.New();
@@ -453,13 +339,15 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         sci.imageArrayLayers = 1;
         sci.imageUsage = VkImageUsageFlags.ColorAttachment;
 
-        FixedArray2<uint> queueFamilyIndices = new FixedArray2<uint>(_graphicsQueueIndex, _presentQueueIndex);
+        var queueFamilyIndices = vulkanPhysicalDevice.QueueFamilyIndices;
 
-        if (_graphicsQueueIndex != _presentQueueIndex)
+        if (vulkanPhysicalDevice.QueueFamilyIndices.Graphics != vulkanPhysicalDevice.QueueFamilyIndices.Present)
         {
+            uint first = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
+
             sci.imageSharingMode = VkSharingMode.Concurrent;
             sci.queueFamilyIndexCount = 2;
-            sci.pQueueFamilyIndices = &queueFamilyIndices.First;
+            sci.pQueueFamilyIndices = &first;
         }
         else
         {
@@ -474,17 +362,17 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         VkSwapchainKHR oldSwapchain = _swapchain;
         sci.oldSwapchain = oldSwapchain;
 
-        vkCreateSwapchainKHR(_device, ref sci, null, out _swapchain);
+        vkCreateSwapchainKHR(vulkanLogicalDevice.Device, ref sci, null, out _swapchain);
         if (oldSwapchain != 0)
         {
-            vkDestroySwapchainKHR(_device, oldSwapchain, null);
+            vkDestroySwapchainKHR(vulkanLogicalDevice.Device, oldSwapchain, null);
         }
 
         // Get the images
         uint scImageCount = 0;
-        vkGetSwapchainImagesKHR(_device, _swapchain, ref scImageCount, null);
+        vkGetSwapchainImagesKHR(vulkanLogicalDevice.Device, _swapchain, ref scImageCount, null);
         _scImages.Count = scImageCount;
-        vkGetSwapchainImagesKHR(_device, _swapchain, ref scImageCount, out _scImages.Items[0]);
+        vkGetSwapchainImagesKHR(vulkanLogicalDevice.Device, _swapchain, ref scImageCount, out _scImages.Items[0]);
 
         _scImageFormat = surfaceFormat.format;
         _scExtent = sci.imageExtent;
@@ -537,7 +425,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         renderPassCI.dependencyCount = 1;
         renderPassCI.pDependencies = &dependency;
 
-        vkCreateRenderPass(_device, ref renderPassCI, null, out _renderPass);
+        vkCreateRenderPass(vulkanLogicalDevice.Device, ref renderPassCI, null, out _renderPass);
     }
 
     private void CreateDescriptorSetLayout()
@@ -560,7 +448,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         dslCI.bindingCount = bindings.Count;
         dslCI.pBindings = &bindings.First;
 
-        vkCreateDescriptorSetLayout(_device, ref dslCI, null, out _descriptoSetLayout);
+        vkCreateDescriptorSetLayout(vulkanLogicalDevice.Device, ref dslCI, null, out _descriptoSetLayout);
     }
 
     private void CreateGraphicsPipeline()
@@ -634,7 +522,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         VkPipelineLayoutCreateInfo pipelineLayoutCI = VkPipelineLayoutCreateInfo.New();
         pipelineLayoutCI.setLayoutCount = 1;
         pipelineLayoutCI.pSetLayouts = &dsl;
-        vkCreatePipelineLayout(_device, ref pipelineLayoutCI, null, out _pipelineLayout);
+        vkCreatePipelineLayout(vulkanLogicalDevice.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
 
         VkGraphicsPipelineCreateInfo graphicsPipelineCI = VkGraphicsPipelineCreateInfo.New();
         graphicsPipelineCI.stageCount = shaderStageCreateInfos.Count;
@@ -651,7 +539,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         graphicsPipelineCI.renderPass = _renderPass;
         graphicsPipelineCI.subpass = 0;
 
-        vkCreateGraphicsPipelines(_device, VkPipelineCache.Null, 1, ref graphicsPipelineCI, null, out _graphicsPipeline);
+        vkCreateGraphicsPipelines(vulkanLogicalDevice.Device, VkPipelineCache.Null, 1, ref graphicsPipelineCI, null, out _graphicsPipeline);
     }
 
     private void CreateFramebuffers()
@@ -668,15 +556,15 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
             framebufferCI.height = _scExtent.height;
             framebufferCI.layers = 1;
 
-            vkCreateFramebuffer(_device, ref framebufferCI, null, out _scFramebuffers[i]);
+            vkCreateFramebuffer(vulkanLogicalDevice.Device, ref framebufferCI, null, out _scFramebuffers[i]);
         }
     }
 
     private void CreateCommandPool()
     {
         VkCommandPoolCreateInfo commandPoolCI = VkCommandPoolCreateInfo.New();
-        commandPoolCI.queueFamilyIndex = _graphicsQueueIndex;
-        vkCreateCommandPool(_device, ref commandPoolCI, null, out _commandPool);
+        commandPoolCI.queueFamilyIndex = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
+        vkCreateCommandPool(vulkanLogicalDevice.Device, ref commandPoolCI, null, out _commandPool);
     }
 
     private void CreateTextureImage()
@@ -703,11 +591,11 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         subresource.mipLevel = 0;
         subresource.arrayLayer = 0;
 
-        vkGetImageSubresourceLayout(_device, stagingImage, ref subresource, out VkSubresourceLayout stagingImageLayout);
+        vkGetImageSubresourceLayout(vulkanLogicalDevice.Device, stagingImage, ref subresource, out VkSubresourceLayout stagingImageLayout);
         ulong rowPitch = stagingImageLayout.rowPitch;
 
         void* mappedPtr;
-        vkMapMemory(_device, stagingImageMemory, 0, imageSize, 0, &mappedPtr);
+        vkMapMemory(vulkanLogicalDevice.Device, stagingImageMemory, 0, imageSize, 0, &mappedPtr);
         var memoryGroup = image.GetPixelMemoryGroup();
         var firstMemory = memoryGroup.ToArray()[0];
         var pixelData = MemoryMarshal.AsBytes(firstMemory.Span).ToArray();
@@ -727,7 +615,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
                 }
             }
         }
-        vkUnmapMemory(_device, stagingImageMemory);
+        vkUnmapMemory(vulkanLogicalDevice.Device, stagingImageMemory);
 
         CreateImage(
             (uint)image.Width,
@@ -744,7 +632,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         CopyImage(stagingImage, _textureImage, (uint)image.Width, (uint)image.Height);
         TransitionImageLayout(_textureImage, VkFormat.R8g8b8a8Unorm, VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal);
 
-        vkDestroyImage(_device, stagingImage, null);
+        vkDestroyImage(vulkanLogicalDevice.Device, stagingImage, null);
     }
 
     private void CreateTextureImageView()
@@ -768,7 +656,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         samplerCI.minLod = 0f;
         samplerCI.maxLod = 0f;
 
-        vkCreateSampler(_device, ref samplerCI, null, out _textureSampler);
+        vkCreateSampler(vulkanLogicalDevice.Device, ref samplerCI, null, out _textureSampler);
     }
 
     private void CreateImage(
@@ -795,22 +683,22 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         imageCI.sharingMode = VkSharingMode.Exclusive;
         imageCI.samples = VkSampleCountFlags.Count1;
 
-        vkCreateImage(_device, ref imageCI, null, out image);
+        vkCreateImage(vulkanLogicalDevice.Device, ref imageCI, null, out image);
 
-        vkGetImageMemoryRequirements(_device, image, out VkMemoryRequirements memRequirements);
+        vkGetImageMemoryRequirements(vulkanLogicalDevice.Device, image, out VkMemoryRequirements memRequirements);
         VkMemoryAllocateInfo allocInfo = VkMemoryAllocateInfo.New();
         allocInfo.allocationSize = memRequirements.size;
         allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
-        vkAllocateMemory(_device, ref allocInfo, null, out memory);
+        vkAllocateMemory(vulkanLogicalDevice.Device, ref allocInfo, null, out memory);
 
-        vkBindImageMemory(_device, image, memory, 0);
+        vkBindImageMemory(vulkanLogicalDevice.Device, image, memory, 0);
     }
 
     private void CreateCommandBuffers()
     {
         if (_commandBuffers.Count > 0)
         {
-            vkFreeCommandBuffers(_device, _commandPool, _scFramebuffers.Count, ref _commandBuffers[0]);
+            vkFreeCommandBuffers(vulkanLogicalDevice.Device, _commandPool, _scFramebuffers.Count, ref _commandBuffers[0]);
         }
 
         _commandBuffers.Resize(_scFramebuffers.Count);
@@ -818,7 +706,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         commandBufferAI.commandPool = _commandPool;
         commandBufferAI.level = VkCommandBufferLevel.Primary;
         commandBufferAI.commandBufferCount = _commandBuffers.Count;
-        vkAllocateCommandBuffers(_device, ref commandBufferAI, out _commandBuffers[0]);
+        vkAllocateCommandBuffers(vulkanLogicalDevice.Device, ref commandBufferAI, out _commandBuffers[0]);
 
         for (uint i = 0; i < _commandBuffers.Count; i++)
         {
@@ -866,8 +754,8 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     private void CreateSemaphores()
     {
         VkSemaphoreCreateInfo semaphoreCI = VkSemaphoreCreateInfo.New();
-        vkCreateSemaphore(_device, ref semaphoreCI, null, out _imageAvailableSemaphore);
-        vkCreateSemaphore(_device, ref semaphoreCI, null, out _renderCompleteSemaphore);
+        vkCreateSemaphore(vulkanLogicalDevice.Device, ref semaphoreCI, null, out _imageAvailableSemaphore);
+        vkCreateSemaphore(vulkanLogicalDevice.Device, ref semaphoreCI, null, out _renderCompleteSemaphore);
     }
 
     private void CreateVertexBuffer()
@@ -927,7 +815,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         descriptorPoolCI.poolSizeCount = poolSizes.Count;
         descriptorPoolCI.pPoolSizes = &poolSizes.First;
         descriptorPoolCI.maxSets = 1;
-        vkCreateDescriptorPool(_device, ref descriptorPoolCI, null, out _descriptorPool);
+        vkCreateDescriptorPool(vulkanLogicalDevice.Device, ref descriptorPoolCI, null, out _descriptorPool);
     }
 
     private void CreateDescriptorSet()
@@ -937,7 +825,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         dsAI.descriptorPool = _descriptorPool;
         dsAI.pSetLayouts = &dsl;
         dsAI.descriptorSetCount = 1;
-        vkAllocateDescriptorSets(_device, ref dsAI, out _descriptorSet);
+        vkAllocateDescriptorSets(vulkanLogicalDevice.Device, ref dsAI, out _descriptorSet);
 
         VkDescriptorBufferInfo bufferInfo = new VkDescriptorBufferInfo();
         bufferInfo.buffer = _uboBuffer;
@@ -967,7 +855,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         descriptorWrites.Second.descriptorCount = 1;
         descriptorWrites.Second.pImageInfo = &imageInfo;
 
-        vkUpdateDescriptorSets(_device, descriptorWrites.Count, &descriptorWrites.First, 0, null);
+        vkUpdateDescriptorSets(vulkanLogicalDevice.Device, descriptorWrites.Count, &descriptorWrites.First, 0, null);
     }
 
     private void CreateBuffer(ulong size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, out VkBuffer buffer, out VkDeviceMemory memory)
@@ -976,14 +864,14 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         bufferCI.size = size;
         bufferCI.usage = usage;
         bufferCI.sharingMode = VkSharingMode.Exclusive;
-        vkCreateBuffer(_device, ref bufferCI, null, out buffer);
+        vkCreateBuffer(vulkanLogicalDevice.Device, ref bufferCI, null, out buffer);
 
-        vkGetBufferMemoryRequirements(_device, buffer, out VkMemoryRequirements memReqs);
+        vkGetBufferMemoryRequirements(vulkanLogicalDevice.Device, buffer, out VkMemoryRequirements memReqs);
         VkMemoryAllocateInfo memAllocCI = VkMemoryAllocateInfo.New();
         memAllocCI.allocationSize = memReqs.size;
         memAllocCI.memoryTypeIndex = FindMemoryType(memReqs.memoryTypeBits, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent);
-        vkAllocateMemory(_device, ref memAllocCI, null, out memory);
-        vkBindBufferMemory(_device, buffer, memory, 0);
+        vkAllocateMemory(vulkanLogicalDevice.Device, ref memAllocCI, null, out memory);
+        vkBindBufferMemory(vulkanLogicalDevice.Device, buffer, memory, 0);
     }
 
     private void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, ulong size)
@@ -1001,27 +889,27 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     {
         ulong size = (ulong)(data.Length * Unsafe.SizeOf<T>());
         void* mappedMemory;
-        vkMapMemory(_device, memory, 0, size, 0, &mappedMemory);
+        vkMapMemory(vulkanLogicalDevice.Device, memory, 0, size, 0, &mappedMemory);
         GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
         Unsafe.CopyBlock(mappedMemory, gh.AddrOfPinnedObject().ToPointer(), (uint)size);
         gh.Free();
-        vkUnmapMemory(_device, memory);
+        vkUnmapMemory(vulkanLogicalDevice.Device, memory);
     }
 
     private void UploadBufferData<T>(VkDeviceMemory memory, ref T data, uint count)
     {
         ulong size = (ulong)(count * Unsafe.SizeOf<T>());
         void* mappedMemory;
-        vkMapMemory(_device, memory, 0, size, 0, &mappedMemory);
+        vkMapMemory(vulkanLogicalDevice.Device, memory, 0, size, 0, &mappedMemory);
         void* dataPtr = Unsafe.AsPointer(ref data);
         Unsafe.CopyBlock(mappedMemory, dataPtr, (uint)size);
-        vkUnmapMemory(_device, memory);
+        vkUnmapMemory(vulkanLogicalDevice.Device, memory);
     }
 
 
     private uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags properties)
     {
-        vkGetPhysicalDeviceMemoryProperties(_physicalDevice, out VkPhysicalDeviceMemoryProperties memProperties);
+        vkGetPhysicalDeviceMemoryProperties(vulkanPhysicalDevice.PhysicalDevice, out VkPhysicalDeviceMemoryProperties memProperties);
         for (int i = 0; i < memProperties.memoryTypeCount; i++)
         {
             if (((typeFilter & (1 << i)) != 0)
@@ -1036,7 +924,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     private void RecreateSwapChain()
     {
-        vkDeviceWaitIdle(_device);
+        vkDeviceWaitIdle(vulkanLogicalDevice.Device);
 
         CreateSwapchain();
         CreateImageViews();
@@ -1053,7 +941,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         {
             smci.pCode = (uint*)byteCodePtr;
             smci.codeSize = new UIntPtr((uint)bytecode.Length);
-            vkCreateShaderModule(_device, ref smci, null, out VkShaderModule module);
+            vkCreateShaderModule(vulkanLogicalDevice.Device, ref smci, null, out VkShaderModule module);
             return module;
         }
     }
@@ -1065,7 +953,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         allocInfo.commandPool = _commandPool;
         allocInfo.level = VkCommandBufferLevel.Primary;
 
-        vkAllocateCommandBuffers(_device, ref allocInfo, out VkCommandBuffer cb);
+        vkAllocateCommandBuffers(vulkanLogicalDevice.Device, ref allocInfo, out VkCommandBuffer cb);
 
         VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.New();
         beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
@@ -1083,10 +971,11 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cb;
 
-        vkQueueSubmit(_graphicsQueue, 1, &submitInfo, VkFence.Null);
-        vkQueueWaitIdle(_graphicsQueue);
+        
+        vkQueueSubmit(vulkanLogicalDevice.GraphicsQueue, 1, &submitInfo, VkFence.Null);
+        vkQueueWaitIdle(vulkanLogicalDevice.GraphicsQueue);
 
-        vkFreeCommandBuffers(_device, _commandPool, 1, ref cb);
+        vkFreeCommandBuffers(vulkanLogicalDevice.Device, _commandPool, 1, ref cb);
     }
 
     private void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -1149,7 +1038,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         imageViewCI.subresourceRange.baseArrayLayer = 0;
         imageViewCI.subresourceRange.layerCount = 1;
 
-        vkCreateImageView(_device, ref imageViewCI, null, out imageView);
+        vkCreateImageView(vulkanLogicalDevice.Device, ref imageViewCI, null, out imageView);
     }
 
     private static void CheckResult(VkResult result)
