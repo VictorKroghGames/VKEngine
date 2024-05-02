@@ -13,6 +13,8 @@ public static class VKEngineContainerBuilderExtensions
         containerBuilder.Services.AddSingleton<IVulkanSwapChain, VulkanSwapChain>();
         containerBuilder.Services.AddSingleton<IVulkanCommandPool, VulkanCommandPool>();
 
+        containerBuilder.Services.AddSingleton<IShaderFactory, VulkanShaderFactory>();
+
         containerBuilder.Services.AddSingleton<IRenderer, VulkanRenderer>();
 
         containerBuilder.Services.AddSingleton<IVulkanSwapChain, VulkanSwapChain>();

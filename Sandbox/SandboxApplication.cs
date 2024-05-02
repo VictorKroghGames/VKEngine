@@ -3,7 +3,7 @@ using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer renderer) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer renderer, IShaderLibrary shaderLibrary) : IApplication
 {
     //[DllImport("opengl32.dll", SetLastError = true)]
     //public static extern void glClear(uint mask);

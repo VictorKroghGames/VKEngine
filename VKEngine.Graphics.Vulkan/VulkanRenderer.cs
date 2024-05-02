@@ -1,6 +1,7 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Collections.Immutable;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -76,7 +77,7 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
     }
 }
 
-internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanCommandPool vulkanCommandPool) : IRenderer
+internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanCommandPool vulkanCommandPool, IShaderFactory shaderFactory) : IRenderer
 {
     private VkInstance _instance;
     private VkPipelineLayout _pipelineLayout;
@@ -327,24 +328,22 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     private void CreateGraphicsPipeline()
     {
-        byte[] vertBytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"));
-        byte[] fragBytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"));
+        var shader = shaderFactory.CreateShader("shader", Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"));
+        if (shader is not IVulkanShader vulkanShader)
+        {
+            throw new InvalidCastException();
+        }
 
-        VkShaderModule vertexShader = CreateShader(vertBytes);
-        VkShaderModule fragmentShader = CreateShader(fragBytes);
+        var shaderModules = vulkanShader.GetShaderModules();
 
-        VkPipelineShaderStageCreateInfo vertCreateInfo = VkPipelineShaderStageCreateInfo.New();
-        vertCreateInfo.stage = VkShaderStageFlags.Vertex;
-        vertCreateInfo.module = vertexShader;
-        vertCreateInfo.pName = Strings.main;
-
-        VkPipelineShaderStageCreateInfo fragCreateInfo = VkPipelineShaderStageCreateInfo.New();
-        fragCreateInfo.stage = VkShaderStageFlags.Fragment;
-        fragCreateInfo.module = fragmentShader;
-        fragCreateInfo.pName = Strings.main;
-
-        FixedArray2<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos
-            = new FixedArray2<VkPipelineShaderStageCreateInfo>(vertCreateInfo, fragCreateInfo);
+        var pipelineShaderStaeCreateInfos = shaderModules.Select(module =>
+        {
+            var pipelineShaderStaeCreateInfo = VkPipelineShaderStageCreateInfo.New();
+            pipelineShaderStaeCreateInfo.stage = module.ShaderStageFlags;
+            pipelineShaderStaeCreateInfo.module = module.Module;
+            pipelineShaderStaeCreateInfo.pName = module.MainFunctionIdentifier;
+            return pipelineShaderStaeCreateInfo;
+        }).ToImmutableDictionary(key => key.stage);
 
         VkPipelineVertexInputStateCreateInfo vertexInputStateCI = VkPipelineVertexInputStateCreateInfo.New();
         var vertexBindingDesc = Vertex.GetBindingDescription();
@@ -398,22 +397,25 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         pipelineLayoutCI.pSetLayouts = &dsl;
         vkCreatePipelineLayout(vulkanLogicalDevice.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
 
-        VkGraphicsPipelineCreateInfo graphicsPipelineCI = VkGraphicsPipelineCreateInfo.New();
-        graphicsPipelineCI.stageCount = shaderStageCreateInfos.Count;
-        graphicsPipelineCI.pStages = &shaderStageCreateInfos.First;
+        fixed (VkPipelineShaderStageCreateInfo* pipelineShaderStageCreateInfoPtr = &pipelineShaderStaeCreateInfos.Values.ToArray()[0])
+        {
+            VkGraphicsPipelineCreateInfo graphicsPipelineCI = VkGraphicsPipelineCreateInfo.New();
+            graphicsPipelineCI.stageCount = (uint)pipelineShaderStaeCreateInfos.Count;
+            graphicsPipelineCI.pStages = pipelineShaderStageCreateInfoPtr;
 
-        graphicsPipelineCI.pVertexInputState = &vertexInputStateCI;
-        graphicsPipelineCI.pInputAssemblyState = &inputAssemblyCI;
-        graphicsPipelineCI.pViewportState = &viewportStateCI;
-        graphicsPipelineCI.pRasterizationState = &rasterizerStateCI;
-        graphicsPipelineCI.pMultisampleState = &multisampleStateCI;
-        graphicsPipelineCI.pColorBlendState = &colorBlendStateCI;
-        graphicsPipelineCI.layout = _pipelineLayout;
+            graphicsPipelineCI.pVertexInputState = &vertexInputStateCI;
+            graphicsPipelineCI.pInputAssemblyState = &inputAssemblyCI;
+            graphicsPipelineCI.pViewportState = &viewportStateCI;
+            graphicsPipelineCI.pRasterizationState = &rasterizerStateCI;
+            graphicsPipelineCI.pMultisampleState = &multisampleStateCI;
+            graphicsPipelineCI.pColorBlendState = &colorBlendStateCI;
+            graphicsPipelineCI.layout = _pipelineLayout;
 
-        graphicsPipelineCI.renderPass = _renderPass;
-        graphicsPipelineCI.subpass = 0;
+            graphicsPipelineCI.renderPass = _renderPass;
+            graphicsPipelineCI.subpass = 0;
 
-        vkCreateGraphicsPipelines(vulkanLogicalDevice.Device, VkPipelineCache.Null, 1, ref graphicsPipelineCI, null, out _graphicsPipeline);
+            var result = vkCreateGraphicsPipelines(vulkanLogicalDevice.Device, VkPipelineCache.Null, 1, ref graphicsPipelineCI, null, out _graphicsPipeline);
+        }
     }
 
     private void CreateFramebuffers()
