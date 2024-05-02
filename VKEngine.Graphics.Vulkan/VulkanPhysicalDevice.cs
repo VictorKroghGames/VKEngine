@@ -47,7 +47,7 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
 
         GetQueueFamiliesUnsafe();
 
-        isInitialized = true;
+        isInitialized = physicalDevice != VkPhysicalDevice.Null;
     }
 
     private unsafe VkPhysicalDevice[] GetVkPhysicalDevicesUnsafe(VkInstance vkInstance)
