@@ -343,7 +343,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
             pipelineShaderStaeCreateInfo.module = module.Module;
             pipelineShaderStaeCreateInfo.pName = module.MainFunctionIdentifier;
             return pipelineShaderStaeCreateInfo;
-        }).ToImmutableDictionary(key => key.stage);
+        });
 
         VkPipelineVertexInputStateCreateInfo vertexInputStateCI = VkPipelineVertexInputStateCreateInfo.New();
         var vertexBindingDesc = Vertex.GetBindingDescription();
@@ -397,10 +397,10 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         pipelineLayoutCI.pSetLayouts = &dsl;
         vkCreatePipelineLayout(vulkanLogicalDevice.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
 
-        fixed (VkPipelineShaderStageCreateInfo* pipelineShaderStageCreateInfoPtr = &pipelineShaderStaeCreateInfos.Values.ToArray()[0])
+        fixed (VkPipelineShaderStageCreateInfo* pipelineShaderStageCreateInfoPtr = &pipelineShaderStaeCreateInfos.ToArray()[0])
         {
             VkGraphicsPipelineCreateInfo graphicsPipelineCI = VkGraphicsPipelineCreateInfo.New();
-            graphicsPipelineCI.stageCount = (uint)pipelineShaderStaeCreateInfos.Count;
+            graphicsPipelineCI.stageCount = (uint)pipelineShaderStaeCreateInfos.Count();
             graphicsPipelineCI.pStages = pipelineShaderStageCreateInfoPtr;
 
             graphicsPipelineCI.pVertexInputState = &vertexInputStateCI;
