@@ -28,13 +28,24 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
     public VkQueue GraphicsQueue => graphicsQueue;
     public VkQueue PresentQueue => presentQueue;
 
-    public unsafe void Initialize()
+    public void Initialize()
     {
         if (vulkanPhysicalDevice.IsInitialized is false)
         {
             throw new ApplicationException("Physical device must be initialized before initializing logical device!");
         }
 
+        var deviceFeatures = new VkPhysicalDeviceFeatures();
+        CreateLogicalDeviceUnsafe(vulkanPhysicalDevice, deviceFeatures);
+
+        vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Graphics, 0, out graphicsQueue);
+        vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Present, 0, out presentQueue);
+
+        isInitialized = true;
+    }
+
+    private unsafe VkResult CreateLogicalDeviceUnsafe(IVulkanPhysicalDevice vulkanPhysicalDevice, VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures)
+    {
         var familyIndices = new HashSet<uint>()
         {
             vulkanPhysicalDevice.QueueFamilyIndices.Graphics,
@@ -54,33 +65,24 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
             queueCreateInfos.Add(queueCreateInfo);
         }
 
-        VkPhysicalDeviceFeatures deviceFeatures = new VkPhysicalDeviceFeatures();
-
         VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New();
 
         fixed (VkDeviceQueueCreateInfo* qciPtr = &queueCreateInfos.Items[0])
-        {
-            deviceCreateInfo.pQueueCreateInfos = qciPtr;
-            deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.Count;
+        deviceCreateInfo.pQueueCreateInfos = qciPtr;
+        deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.Count;
 
-            deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+        deviceCreateInfo.pEnabledFeatures = &vkPhysicalDeviceFeatures;
 
-            byte* layerNames = Strings.StandardValidationLayerName;
-            deviceCreateInfo.enabledLayerCount = 1;
-            deviceCreateInfo.ppEnabledLayerNames = &layerNames;
+        byte* layerNames = Strings.StandardValidationLayerName;
+        deviceCreateInfo.enabledLayerCount = 1;
+        deviceCreateInfo.ppEnabledLayerNames = &layerNames;
 
-            byte* extensionNames = Strings.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-            deviceCreateInfo.enabledExtensionCount = 1;
-            deviceCreateInfo.ppEnabledExtensionNames = &extensionNames;
+        byte* extensionNames = Strings.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+        deviceCreateInfo.enabledExtensionCount = 1;
+        deviceCreateInfo.ppEnabledExtensionNames = &extensionNames;
 
-            var physicalDevice = ((VulkanPhysicalDevice)vulkanPhysicalDevice).physicalDevice;
+        var physicalDevice = ((VulkanPhysicalDevice)vulkanPhysicalDevice).physicalDevice;
 
-            vkCreateDevice(physicalDevice, ref deviceCreateInfo, null, out device);
-        }
-
-        vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Graphics, 0, out graphicsQueue);
-        vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Present, 0, out presentQueue);
-
-        isInitialized = true;
+        return vkCreateDevice(physicalDevice, ref deviceCreateInfo, null, out device);
     }
 }
