@@ -3,7 +3,7 @@ using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer renderer, IShaderLibrary shaderLibrary) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer renderer, ITestRenderer testRenderer) : IApplication
 {
     //[DllImport("opengl32.dll", SetLastError = true)]
     //public static extern void glClear(uint mask);
@@ -35,6 +35,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer
         window.Initialize();
 
         renderer.Initialize();
+        testRenderer.Initialize();
 
         while (isRunning)
         {
@@ -48,7 +49,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer
                 actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
             }
 
-            renderer.RenderTriangle();
+            testRenderer.RenderTriangle();
 
             //glClear(GL_COLOR_BUFFER_BIT);
             //glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -56,6 +57,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer
             window.Update();
             isRunning = window.IsRunning;
         }
+
+        testRenderer.Cleanup();
 
         thread.Join();
     }

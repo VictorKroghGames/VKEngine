@@ -1,18 +1,9 @@
-﻿using System.Net.Http.Headers;
+﻿using VKEngine.Graphics.Vulkan.Data;
 using VKEngine.Graphics.Vulkan.Native;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
-
-internal struct VulkanShaderModule
-{
-    public ShaderModuleType Type { get; init; }
-    public FixedUtf8String MainFunctionIdentifier { get; init; }
-    public VkShaderModule Module { get; init; }
-
-    internal VkShaderStageFlags ShaderStageFlags { get; init; }
-}
 
 internal interface IVulkanShader : IShader
 {
@@ -21,10 +12,7 @@ internal interface IVulkanShader : IShader
 
 internal sealed class VulkanShader(IVulkanLogicalDevice vulkanLogicalDevice, string name, params ShaderModuleSpecification[] shaderModuleSpecifications) : IVulkanShader
 {
-    private readonly IDictionary<ShaderModuleType, VulkanShaderModule> shaderModules = new Dictionary<ShaderModuleType, VulkanShaderModule>();
-
-    private VkShaderModule vertexShaderModule = VkShaderModule.Null;
-    private VkShaderModule fragmentShaderModule = VkShaderModule.Null;
+    private readonly Dictionary<ShaderModuleType, VulkanShaderModule> shaderModules = [];
 
     public string Name => name;
 

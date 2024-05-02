@@ -7,9 +7,16 @@ public static class VKEngineContainerBuilderExtensions
 {
     public static IVKEngineContainerBuilder AddGraphicsModule(this IVKEngineContainerBuilder containerBuilder)
     {
+        return containerBuilder.AddGraphicsModule<DefaultRenderer>();
+    }
+
+    public static IVKEngineContainerBuilder AddGraphicsModule<TRenderer>(this IVKEngineContainerBuilder containerBuilder)
+        where TRenderer : class, IRenderer
+    {
         containerBuilder.AddVulkanGraphics();
 
         containerBuilder.Services.AddSingleton<IShaderLibrary, ShaderLibrary>();
+        containerBuilder.Services.AddSingleton<IRenderer, TRenderer>();
 
         return containerBuilder;
     }

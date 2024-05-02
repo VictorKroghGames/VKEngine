@@ -2,25 +2,25 @@
 
 namespace VKEngine.Graphics;
 
-public interface IShaderLibrary
-{
-    IShader? Get(string name);
-    void Load(string name, string vertexShaderFilePath, string fragmentShaderFilePath);
-    void Load(string name, params ShaderModuleSpecification[] shaderModuleSpecifications);
-}
-
 internal sealed class ShaderLibrary(IShaderFactory shaderFactory) : IShaderLibrary
 {
     private readonly IDictionary<string, IShader> shaders = new ConcurrentDictionary<string, IShader>();
 
-    public IShader? Get(string name)
+    public IShader? Get(string name) => Get<IShader>(name);
+
+    public TShader? Get<TShader>(string name) where TShader : IShader
     {
         if (shaders.TryGetValue(name, out var shader) is false)
         {
             return default;
         }
 
-        return shader;
+        if (shader is not TShader shaderOfType)
+        {
+            return default;
+        }
+
+        return shaderOfType;
     }
 
     public void Load(string name, string vertexShaderFilePath, string fragmentShaderFilePath)

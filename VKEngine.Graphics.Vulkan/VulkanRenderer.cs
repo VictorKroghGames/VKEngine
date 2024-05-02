@@ -77,7 +77,7 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
     }
 }
 
-internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanCommandPool vulkanCommandPool, IShaderFactory shaderFactory) : IRenderer
+internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanCommandPool vulkanCommandPool, IShaderLibrary shaderLibrary) : ITestRenderer
 {
     private VkInstance _instance;
     private VkPipelineLayout _pipelineLayout;
@@ -121,15 +121,10 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     public void Initialize()
     {
-        if (GLFW.VulkanSupported() is false)
-        {
-            throw new ApplicationException("Vulkan is not supported.");
-        }
-
-        CreateInstance();
-        vulkanPhysicalDevice.Initialize(_instance);
-        vulkanLogicalDevice.Initialize();
-        vulkanSwapChain.Initialize(_instance);
+        //CreateInstance();
+        //vulkanPhysicalDevice.Initialize(_instance);
+        //vulkanLogicalDevice.Initialize();
+        //vulkanSwapChain.Initialize(_instance);
         CreateRenderPass();
         CreateDescriptorSetLayout();
         CreateGraphicsPipeline();
@@ -149,7 +144,6 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     public void Cleanup()
     {
-        vkDestroyInstance(_instance, nint.Zero);
     }
 
     public void RenderTriangle()
@@ -328,13 +322,13 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     private void CreateGraphicsPipeline()
     {
-        var shader = shaderFactory.CreateShader("shader", Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"));
-        if (shader is not IVulkanShader vulkanShader)
+        var shader = shaderLibrary.Get<IVulkanShader>("shader");
+        if (shader is null)
         {
-            throw new InvalidCastException();
+            throw new Exception("Shader not found");
         }
 
-        var shaderModules = vulkanShader.GetShaderModules();
+        var shaderModules = shader.GetShaderModules();
 
         var pipelineShaderStaeCreateInfos = shaderModules.Select(module =>
         {

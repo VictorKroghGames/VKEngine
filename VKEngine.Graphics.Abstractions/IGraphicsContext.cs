@@ -1,6 +1,6 @@
 ﻿namespace VKEngine.Graphics;
 
-public interface IRenderer
+public interface IGraphicsContext
 {
     void Initialize();
 }
