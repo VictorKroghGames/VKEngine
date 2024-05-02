@@ -9,7 +9,7 @@ public struct QueueFamilyIndex
     public uint Present { get; set; }
 }
 
-public interface IVulkanPhysicalDevice
+public interface IVulkanPhysicalDevice : IDisposable
 {
     bool IsInitialized { get; }
 
@@ -48,6 +48,10 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
         GetQueueFamiliesUnsafe();
 
         isInitialized = physicalDevice != VkPhysicalDevice.Null;
+    }
+
+    public void Dispose()
+    {
     }
 
     private unsafe VkPhysicalDevice[] GetVkPhysicalDevicesUnsafe(VkInstance vkInstance)

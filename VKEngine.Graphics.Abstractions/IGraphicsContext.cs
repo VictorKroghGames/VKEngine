@@ -1,6 +1,6 @@
 ﻿namespace VKEngine.Graphics;
 
-public interface IGraphicsContext
+public interface IGraphicsContext : IDisposable
 {
     void Initialize();
 }

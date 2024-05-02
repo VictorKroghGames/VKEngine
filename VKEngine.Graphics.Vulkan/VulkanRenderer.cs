@@ -79,7 +79,6 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
 
 internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanCommandPool vulkanCommandPool, IShaderLibrary shaderLibrary) : ITestRenderer
 {
-    private VkInstance _instance;
     private VkPipelineLayout _pipelineLayout;
     private VkRenderPass _renderPass;
     private VkPipeline _graphicsPipeline;
@@ -121,10 +120,6 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     public void Initialize()
     {
-        //CreateInstance();
-        //vulkanPhysicalDevice.Initialize(_instance);
-        //vulkanLogicalDevice.Initialize();
-        //vulkanSwapChain.Initialize(_instance);
         CreateRenderPass();
         CreateDescriptorSetLayout();
         CreateGraphicsPipeline();
@@ -210,50 +205,6 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         presentInfo.pImageIndices = &imageIndex;
 
         vkQueuePresentKHR(vulkanLogicalDevice.PresentQueue, ref presentInfo);
-    }
-
-    private void CreateInstance()
-    {
-        VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New();
-        VkApplicationInfo appInfo = VkApplicationInfo.New();
-        appInfo.pApplicationName = Strings.AppName;
-        appInfo.pEngineName = Strings.EngineName;
-        appInfo.apiVersion = new Version(1, 0, 0);
-        appInfo.engineVersion = new Version(1, 0, 0);
-        appInfo.apiVersion = new Version(1, 0, 0);
-        instanceCreateInfo.pApplicationInfo = &appInfo;
-        RawList<IntPtr> instanceLayers = new RawList<IntPtr>();
-        RawList<IntPtr> instanceExtensions = new RawList<IntPtr>();
-        instanceExtensions.Add(Strings.VK_KHR_SURFACE_EXTENSION_NAME);
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            instanceExtensions.Add(Strings.VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            instanceExtensions.Add(Strings.VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-        }
-        else
-        {
-            throw new PlatformNotSupportedException();
-        }
-
-        bool debug = true;
-        if (debug)
-        {
-            instanceExtensions.Add(Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-            instanceLayers.Add(Strings.StandardValidationLayerName);
-        }
-
-        fixed (IntPtr* extensionsBase = &instanceExtensions.Items[0])
-        fixed (IntPtr* layersBase = &instanceLayers.Items[0])
-        {
-            instanceCreateInfo.enabledExtensionCount = instanceExtensions.Count;
-            instanceCreateInfo.ppEnabledExtensionNames = (byte**)extensionsBase;
-            instanceCreateInfo.enabledLayerCount = instanceLayers.Count;
-            instanceCreateInfo.ppEnabledLayerNames = (byte**)(layersBase);
-            CheckResult(vkCreateInstance(ref instanceCreateInfo, null, out _instance));
-        }
     }
 
     private void CreateRenderPass()

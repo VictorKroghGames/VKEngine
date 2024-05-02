@@ -1,6 +1,6 @@
 ﻿namespace VKEngine.Graphics;
 
-public interface IRenderer
+public interface IRenderer : IDisposable
 {
     void Initialize();
 }

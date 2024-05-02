@@ -41,6 +41,10 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
         CreateImageViewsUnsafe();
     }
 
+    public void Dispose()
+    {
+    }
+
     private unsafe void CreateSurfaceUnsafe(VkInstance vkInstance)
     {
         var result = GLFW.CreateWindowSurface(vkInstance.Handle, window.NativeWindowHandle, IntPtr.Zero, out var surfacePtr);
@@ -190,10 +194,5 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
 
             imageViews.Add(imageView);
         }
-    }
-
-    public void Dispose()
-    {
-        throw new NotImplementedException();
     }
 }

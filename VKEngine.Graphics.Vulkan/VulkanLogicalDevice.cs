@@ -4,7 +4,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-public interface IVulkanLogicalDevice
+public interface IVulkanLogicalDevice : IDisposable
 {
     bool IsInitialized { get; }
 
@@ -42,6 +42,10 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
         vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Present, 0, out presentQueue);
 
         isInitialized = true;
+    }
+
+    public void Dispose()
+    {
     }
 
     private unsafe VkResult CreateLogicalDeviceUnsafe(IVulkanPhysicalDevice vulkanPhysicalDevice, VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures)

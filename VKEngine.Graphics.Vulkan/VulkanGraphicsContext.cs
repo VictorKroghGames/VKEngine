@@ -5,9 +5,16 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain) : IGraphicsContext
+internal interface IVulkanGraphicsContext : IGraphicsContext
+{
+    internal VkInstance Instance { get; }
+}
+
+internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain) : IVulkanGraphicsContext
 {
     private VkInstance instance;
+
+    VkInstance IVulkanGraphicsContext.Instance => instance;
 
     public void Initialize()
     {
@@ -25,6 +32,15 @@ internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysical
         vulkanPhysicalDevice.Initialize(instance);
         vulkanLogicalDevice.Initialize();
         vulkanSwapChain.Initialize(instance);
+    }
+
+    public void Dispose()
+    {
+        vkDestroyInstance(instance, IntPtr.Zero);
+
+        vulkanPhysicalDevice.Dispose();
+        vulkanLogicalDevice.Dispose();
+        vulkanSwapChain.Dispose();
     }
 
     private unsafe VkResult CreateInstanceUnsafe()
@@ -87,5 +103,15 @@ internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysical
             rawList.Add(new FixedUtf8String(extension));
         }
         return rawList;
+    }
+
+    void IGraphicsContext.Initialize()
+    {
+        throw new NotImplementedException();
+    }
+
+    void IDisposable.Dispose()
+    {
+        throw new NotImplementedException();
     }
 }

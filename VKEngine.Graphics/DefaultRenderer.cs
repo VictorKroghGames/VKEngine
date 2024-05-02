@@ -11,4 +11,9 @@ internal class DefaultRenderer(IGraphicsContext graphicsContext, IShaderLibrary 
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"), ShaderModuleType.Fragment)
         );
     }
+
+    public void Dispose()
+    {
+        graphicsContext.Dispose();
+    }
 }

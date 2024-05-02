@@ -60,6 +60,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer
 
         testRenderer.Cleanup();
 
+        renderer.Dispose();
+
         thread.Join();
     }
 
