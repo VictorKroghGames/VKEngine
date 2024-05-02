@@ -10,6 +10,8 @@ public static class VKEngineContainerBuilderExtensions
     {
         containerBuilder.Services.AddSingleton<IVulkanPhysicalDevice, VulkanPhysicalDevice>();
         containerBuilder.Services.AddSingleton<IVulkanLogicalDevice, VulkanLogicalDevice>();
+        containerBuilder.Services.AddSingleton<IVulkanSwapChain, VulkanSwapChain>();
+        containerBuilder.Services.AddSingleton<IVulkanCommandPool, VulkanCommandPool>();
 
         containerBuilder.Services.AddSingleton<IRenderer, VulkanRenderer>();
 

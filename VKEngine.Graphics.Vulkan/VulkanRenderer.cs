@@ -4,7 +4,6 @@ using SixLabors.ImageSharp.PixelFormats;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using VKEngine.Graphics.Vulkan.Native;
 using Vulkan;
 using static Vulkan.VulkanNative;
@@ -77,14 +76,12 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
     }
 }
 
-internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanCommandPool vulkanCommandPool) : IRenderer
+internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanCommandPool vulkanCommandPool) : IRenderer
 {
     private VkInstance _instance;
-    private VkSurfaceKHR _surface;
     private VkPipelineLayout _pipelineLayout;
     private VkRenderPass _renderPass;
     private VkPipeline _graphicsPipeline;
-    //private VkCommandPool _commandPool;
     private RawList<VkCommandBuffer> _commandBuffers = new RawList<VkCommandBuffer>();
     private VkSemaphore _imageAvailableSemaphore;
     private VkSemaphore _renderCompleteSemaphore;
@@ -104,13 +101,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     private VkImageView _textureImageView;
     private VkSampler _textureSampler;
 
-    // Swapchain stuff
-    private RawList<VkImage> _scImages = new RawList<VkImage>();
-    private RawList<VkImageView> _scImageViews = new RawList<VkImageView>();
     private RawList<VkFramebuffer> _scFramebuffers = new RawList<VkFramebuffer>();
-    private VkSwapchainKHR _swapchain;
-    private VkFormat _scImageFormat;
-    private VkExtent2D _scExtent;
 
     private DateTime _startTime = DateTime.UtcNow;
 
@@ -137,16 +128,12 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         CreateInstance();
         vulkanPhysicalDevice.Initialize(_instance);
         vulkanLogicalDevice.Initialize();
-        //vulkanSwapChain.Initialize(_instance);
-        CreateSurface();
-        CreateSwapchain();
-        CreateImageViews();
+        vulkanSwapChain.Initialize(_instance);
         CreateRenderPass();
         CreateDescriptorSetLayout();
         CreateGraphicsPipeline();
         CreateFramebuffers();
         vulkanCommandPool.Initialize();
-        //CreateCommandPool();
         CreateTextureImage();
         CreateTextureImageView();
         CreateTextureSampler();
@@ -178,7 +165,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         UboMatrices uboMatrices = new UboMatrices(
             Matrix4x4.CreateRotationZ(time * DegreesToRadians(90f)),
             Matrix4x4.CreateLookAt(new Vector3(2, 2, 2), new Vector3(), new Vector3(0, 0, 1)),
-            Matrix4x4.CreatePerspectiveFieldOfView(DegreesToRadians(45f), (float)_scExtent.width / _scExtent.height, 0.1f, 10f));
+            Matrix4x4.CreatePerspectiveFieldOfView(DegreesToRadians(45f), (float)window.Width / window.Height, 0.1f, 10f));
 
         uboMatrices.Projection.M22 *= -1; // ?
 
@@ -194,7 +181,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     private void DrawFrame()
     {
         uint imageIndex = 0;
-        VkResult result = vkAcquireNextImageKHR(vulkanLogicalDevice.Device, _swapchain, ulong.MaxValue, _imageAvailableSemaphore, VkFence.Null, ref imageIndex);
+        VkResult result = vkAcquireNextImageKHR(vulkanLogicalDevice.Device, vulkanSwapChain.Raw, ulong.MaxValue, _imageAvailableSemaphore, VkFence.Null, ref imageIndex);
         if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR)
         {
             RecreateSwapChain();
@@ -222,7 +209,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = &signalSemaphore;
 
-        VkSwapchainKHR swapchain = _swapchain;
+        VkSwapchainKHR swapchain = vulkanSwapChain.Raw;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &swapchain;
         presentInfo.pImageIndices = &imageIndex;
@@ -274,125 +261,10 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         }
     }
 
-    private void CreateSurface()
-    {
-        var result = GLFW.CreateWindowSurface(_instance.Handle, window.NativeWindowHandle, IntPtr.Zero, out var surfacePtr);
-        if (result is not VkResult.Success)
-        {
-            throw new InvalidOperationException("Failed to create window surface.");
-        }
-
-        _surface = new VkSurfaceKHR((ulong)surfacePtr.ToInt64());
-    }
-
-    private void CreateSwapchain()
-    {
-        uint surfaceFormatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref surfaceFormatCount, null);
-        VkSurfaceFormatKHR[] formats = new VkSurfaceFormatKHR[surfaceFormatCount];
-        vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref surfaceFormatCount, out formats[0]);
-
-        VkSurfaceFormatKHR surfaceFormat = new VkSurfaceFormatKHR();
-        if (formats.Length == 1 && formats[0].format == VkFormat.Undefined)
-        {
-            surfaceFormat = new VkSurfaceFormatKHR { colorSpace = VkColorSpaceKHR.SrgbNonlinearKHR, format = VkFormat.B8g8r8a8Unorm };
-        }
-        else
-        {
-            foreach (VkSurfaceFormatKHR format in formats)
-            {
-                if (format.colorSpace == VkColorSpaceKHR.SrgbNonlinearKHR && format.format == VkFormat.B8g8r8a8Unorm)
-                {
-                    surfaceFormat = format;
-                    break;
-                }
-            }
-            if (surfaceFormat.format == VkFormat.Undefined)
-            {
-                surfaceFormat = formats[0];
-            }
-        }
-
-        uint presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref presentModeCount, null);
-        VkPresentModeKHR[] presentModes = new VkPresentModeKHR[presentModeCount];
-        vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref presentModeCount, out presentModes[0]);
-
-        VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR;
-        if (presentModes.Contains(VkPresentModeKHR.MailboxKHR))
-        {
-            presentMode = VkPresentModeKHR.MailboxKHR;
-        }
-        else if (presentModes.Contains(VkPresentModeKHR.ImmediateKHR))
-        {
-            presentMode = VkPresentModeKHR.ImmediateKHR;
-        }
-
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
-        uint imageCount = surfaceCapabilities.minImageCount + 1;
-
-        VkSwapchainCreateInfoKHR sci = VkSwapchainCreateInfoKHR.New();
-        sci.surface = _surface;
-        sci.presentMode = presentMode;
-        sci.imageFormat = surfaceFormat.format;
-        sci.imageColorSpace = surfaceFormat.colorSpace;
-        sci.imageExtent = new VkExtent2D { width = (uint)window.Width, height = (uint)window.Height };
-        sci.minImageCount = imageCount;
-        sci.imageArrayLayers = 1;
-        sci.imageUsage = VkImageUsageFlags.ColorAttachment;
-
-        var queueFamilyIndices = vulkanPhysicalDevice.QueueFamilyIndices;
-
-        if (vulkanPhysicalDevice.QueueFamilyIndices.Graphics != vulkanPhysicalDevice.QueueFamilyIndices.Present)
-        {
-            uint first = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
-
-            sci.imageSharingMode = VkSharingMode.Concurrent;
-            sci.queueFamilyIndexCount = 2;
-            sci.pQueueFamilyIndices = &first;
-        }
-        else
-        {
-            sci.imageSharingMode = VkSharingMode.Exclusive;
-            sci.queueFamilyIndexCount = 0;
-        }
-
-        sci.preTransform = surfaceCapabilities.currentTransform;
-        sci.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
-        sci.clipped = true;
-
-        VkSwapchainKHR oldSwapchain = _swapchain;
-        sci.oldSwapchain = oldSwapchain;
-
-        vkCreateSwapchainKHR(vulkanLogicalDevice.Device, ref sci, null, out _swapchain);
-        if (oldSwapchain != 0)
-        {
-            vkDestroySwapchainKHR(vulkanLogicalDevice.Device, oldSwapchain, null);
-        }
-
-        // Get the images
-        uint scImageCount = 0;
-        vkGetSwapchainImagesKHR(vulkanLogicalDevice.Device, _swapchain, ref scImageCount, null);
-        _scImages.Count = scImageCount;
-        vkGetSwapchainImagesKHR(vulkanLogicalDevice.Device, _swapchain, ref scImageCount, out _scImages.Items[0]);
-
-        _scImageFormat = surfaceFormat.format;
-        _scExtent = sci.imageExtent;
-    }
-
-    private void CreateImageViews()
-    {
-        _scImageViews.Resize(_scImages.Count);
-        for (int i = 0; i < _scImages.Count; i++)
-        {
-            CreateImageView(_scImages[i], _scImageFormat, out _scImageViews[i]);
-        }
-    }
-
     private void CreateRenderPass()
     {
         VkAttachmentDescription colorAttachment = new VkAttachmentDescription();
-        colorAttachment.format = _scImageFormat;
+        colorAttachment.format = vulkanSwapChain.SurfaceFormat.format;
         colorAttachment.samples = VkSampleCountFlags.Count1;
         colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
         colorAttachment.storeOp = VkAttachmentStoreOp.Store;
@@ -489,12 +361,12 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         VkViewport viewport = new VkViewport();
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = _scExtent.width;
-        viewport.height = _scExtent.height;
+        viewport.width = window.Width;
+        viewport.height = window.Height;
         viewport.minDepth = 0f;
         viewport.maxDepth = 1f;
 
-        VkRect2D scissorRect = new VkRect2D(_scExtent);
+        VkRect2D scissorRect = new VkRect2D(vulkanSwapChain.Extent);
 
         VkPipelineViewportStateCreateInfo viewportStateCI = VkPipelineViewportStateCreateInfo.New();
         viewportStateCI.viewportCount = 1;
@@ -546,28 +418,21 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     private void CreateFramebuffers()
     {
-        _scFramebuffers.Resize(_scImageViews.Count);
-        for (uint i = 0; i < _scImageViews.Count; i++)
+        _scFramebuffers.Resize(vulkanSwapChain.ImageViews.Count);
+        for (uint i = 0; i < vulkanSwapChain.ImageViews.Count; i++)
         {
-            VkImageView attachment = _scImageViews[i];
+            VkImageView attachment = vulkanSwapChain.ImageViews[i];
             VkFramebufferCreateInfo framebufferCI = VkFramebufferCreateInfo.New();
             framebufferCI.renderPass = _renderPass;
             framebufferCI.attachmentCount = 1;
             framebufferCI.pAttachments = &attachment;
-            framebufferCI.width = _scExtent.width;
-            framebufferCI.height = _scExtent.height;
+            framebufferCI.width = vulkanSwapChain.Extent.width;
+            framebufferCI.height = vulkanSwapChain.Extent.height;
             framebufferCI.layers = 1;
 
             vkCreateFramebuffer(vulkanLogicalDevice.Device, ref framebufferCI, null, out _scFramebuffers[i]);
         }
     }
-
-    //private void CreateCommandPool()
-    //{
-    //    VkCommandPoolCreateInfo commandPoolCI = VkCommandPoolCreateInfo.New();
-    //    commandPoolCI.queueFamilyIndex = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
-    //    vkCreateCommandPool(vulkanLogicalDevice.Device, ref commandPoolCI, null, out _commandPool);
-    //}
 
     private void CreateTextureImage()
     {
@@ -721,7 +586,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
             VkRenderPassBeginInfo rpbi = VkRenderPassBeginInfo.New();
             rpbi.renderPass = _renderPass;
             rpbi.framebuffer = _scFramebuffers[i];
-            rpbi.renderArea.extent = _scExtent;
+            rpbi.renderArea.extent = vulkanSwapChain.Extent;
 
             VkClearValue clearValue = new VkClearValue() { color = new VkClearColorValue(0.2f, 0.3f, 0.3f, 1.0f) };
             rpbi.clearValueCount = 1;
@@ -928,8 +793,8 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     {
         vkDeviceWaitIdle(vulkanLogicalDevice.Device);
 
-        CreateSwapchain();
-        CreateImageViews();
+        //CreateSwapchain();
+        //CreateImageViews();
         CreateRenderPass();
         CreateGraphicsPipeline();
         CreateFramebuffers();

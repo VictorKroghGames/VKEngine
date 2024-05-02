@@ -4,22 +4,30 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-public interface IVulkanSwapChain
+public interface IVulkanSwapChain : IDisposable
 {
+    VkSwapchainKHR Raw { get; }
+    VkSurfaceFormatKHR SurfaceFormat { get; }
+    RawList<VkImageView> ImageViews { get; }
+    VkExtent2D Extent { get; }
+
     void Initialize(VkInstance vkInstance);
 }
 
 internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice) : IVulkanSwapChain
 {
-    private VkSurfaceKHR _surface;
+    private VkSwapchainKHR swapchain;
+    private VkSurfaceKHR surface;
+    private VkPresentModeKHR presentMode;
+    private VkSurfaceFormatKHR surfaceFormat;
+    private VkExtent2D extent = new VkExtent2D(window.Width, window.Height);
 
-    // Swapchain stuff
-    private RawList<VkImage> _scImages = new RawList<VkImage>();
-    private RawList<VkImageView> _scImageViews = new RawList<VkImageView>();
-    private RawList<VkFramebuffer> _scFramebuffers = new RawList<VkFramebuffer>();
-    private VkSwapchainKHR _swapchain;
-    private VkFormat _scImageFormat;
-    private VkExtent2D _scExtent;
+    private RawList<VkImageView> imageViews = [];
+
+    public VkSwapchainKHR Raw => swapchain;
+    public VkSurfaceFormatKHR SurfaceFormat => surfaceFormat;
+    public RawList<VkImageView> ImageViews => imageViews;
+    public VkExtent2D Extent => extent;
 
     public void Initialize(VkInstance vkInstance)
     {
@@ -28,138 +36,164 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
             throw new ApplicationException("Physical device must be initialized before initializing logical device!");
         }
 
-        CreateSurface(vkInstance);
+        CreateSurfaceUnsafe(vkInstance);
         CreateSwapChainUnsafe();
-        CreateImageViews();
+        CreateImageViewsUnsafe();
     }
 
-    private void CreateSurface(VkInstance vkInstance)
+    private unsafe void CreateSurfaceUnsafe(VkInstance vkInstance)
     {
         var result = GLFW.CreateWindowSurface(vkInstance.Handle, window.NativeWindowHandle, IntPtr.Zero, out var surfacePtr);
-        if(result is not VkResult.Success)
+        if (result is not VkResult.Success)
         {
             throw new ApplicationException("Failed to create window surface!");
         }
 
-        _surface = new VkSurfaceKHR((ulong)surfacePtr.ToInt64());
+        surface = new VkSurfaceKHR((ulong)surfacePtr.ToInt64());
+
+        presentMode = GetSurfacePresentModeUnsafe();
+
+        surfaceFormat = GetSurfaceFormatUnsafe();
+    }
+
+    private unsafe VkPresentModeKHR GetSurfacePresentModeUnsafe()
+    {
+        var presentModeCount = 0u;
+        var result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanPhysicalDevice.PhysicalDevice, surface, &presentModeCount, null);
+        if (result is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to get physical device surface present modes!");
+        }
+
+        var presentModes = stackalloc VkPresentModeKHR[(int)presentModeCount];
+        result = vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanPhysicalDevice.PhysicalDevice, surface, &presentModeCount, presentModes);
+        if (result is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to get physical device surface present modes!");
+        }
+
+        var presentModeKHR = VkPresentModeKHR.FifoKHR; // If v-sync is enabled, this is the only mode available
+        for (int i = 0; i < presentModeCount; i++)
+        {
+            if (presentModes[i].Equals(VkPresentModeKHR.MailboxKHR))
+            {
+                presentModeKHR = VkPresentModeKHR.MailboxKHR;
+                break;
+            }
+        }
+
+        return presentModeKHR;
+    }
+
+    private unsafe VkSurfaceFormatKHR GetSurfaceFormatUnsafe()
+    {
+        var surfaceFormatCount = 0u;
+        var result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanPhysicalDevice.PhysicalDevice, surface, &surfaceFormatCount, null);
+        if (result is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to get physical device surface present modes!");
+        }
+
+        var surfaceFormats = stackalloc VkSurfaceFormatKHR[(int)surfaceFormatCount];
+        result = vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanPhysicalDevice.PhysicalDevice, surface, &surfaceFormatCount, surfaceFormats);
+        if (result is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to get physical device surface present modes!");
+        }
+
+        var surfaceFormatKHR = surfaceFormats[0];
+        for (int i = 0; i < surfaceFormatCount; i++)
+        {
+            var format = surfaceFormats[i];
+
+            if (format.colorSpace == VkColorSpaceKHR.SrgbNonlinearKHR && format.format == VkFormat.B8g8r8a8Unorm)
+            {
+                surfaceFormatKHR = format;
+                break;
+            }
+        }
+
+        return surfaceFormatKHR;
     }
 
     private unsafe void CreateSwapChainUnsafe()
     {
-        uint surfaceFormatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref surfaceFormatCount, null);
-        VkSurfaceFormatKHR[] formats = new VkSurfaceFormatKHR[surfaceFormatCount];
-        vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref surfaceFormatCount, out formats[0]);
-
-        VkSurfaceFormatKHR surfaceFormat = new VkSurfaceFormatKHR();
-        if (formats.Length == 1 && formats[0].format == VkFormat.Undefined)
+        var surfaceCapabilities = new VkSurfaceCapabilitiesKHR();
+        var result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanPhysicalDevice.PhysicalDevice, surface, out surfaceCapabilities);
+        if (result is not VkResult.Success)
         {
-            surfaceFormat = new VkSurfaceFormatKHR { colorSpace = VkColorSpaceKHR.SrgbNonlinearKHR, format = VkFormat.B8g8r8a8Unorm };
-        }
-        else
-        {
-            foreach (VkSurfaceFormatKHR format in formats)
-            {
-                if (format.colorSpace == VkColorSpaceKHR.SrgbNonlinearKHR && format.format == VkFormat.B8g8r8a8Unorm)
-                {
-                    surfaceFormat = format;
-                    break;
-                }
-            }
-            if (surfaceFormat.format == VkFormat.Undefined)
-            {
-                surfaceFormat = formats[0];
-            }
+            throw new ApplicationException("Failed to get physical device surface capabilities!");
         }
 
-        uint presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref presentModeCount, null);
-        VkPresentModeKHR[] presentModes = new VkPresentModeKHR[presentModeCount];
-        vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, ref presentModeCount, out presentModes[0]);
+        var swapChainCreateInfo = VkSwapchainCreateInfoKHR.New();
+        swapChainCreateInfo.surface = surface;
+        swapChainCreateInfo.oldSwapchain = VkSwapchainKHR.Null;
+        swapChainCreateInfo.imageFormat = surfaceFormat.format;
+        swapChainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
+        swapChainCreateInfo.minImageCount = surfaceCapabilities.minImageCount + 1; // frames in flight
+        swapChainCreateInfo.imageSharingMode = VkSharingMode.Exclusive;
+        swapChainCreateInfo.imageExtent = extent;
+        swapChainCreateInfo.imageArrayLayers = 1;
+        swapChainCreateInfo.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
+        swapChainCreateInfo.clipped = true;
+        swapChainCreateInfo.imageUsage = VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransferDst;
+        swapChainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
+        swapChainCreateInfo.presentMode = presentMode;
 
-        VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR;
-        if (presentModes.Contains(VkPresentModeKHR.MailboxKHR))
+        result = vkCreateSwapchainKHR(vulkanLogicalDevice.Device, ref swapChainCreateInfo, null, out swapchain);
+        if (result is not VkResult.Success)
         {
-            presentMode = VkPresentModeKHR.MailboxKHR;
+            throw new ApplicationException("Failed to create swapchain!");
         }
-        else if (presentModes.Contains(VkPresentModeKHR.ImmediateKHR))
-        {
-            presentMode = VkPresentModeKHR.ImmediateKHR;
-        }
+    }
 
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanPhysicalDevice.PhysicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
-        uint imageCount = surfaceCapabilities.minImageCount + 1;
-
-        VkSwapchainCreateInfoKHR sci = VkSwapchainCreateInfoKHR.New();
-        sci.surface = _surface;
-        sci.presentMode = presentMode;
-        sci.imageFormat = surfaceFormat.format;
-        sci.imageColorSpace = surfaceFormat.colorSpace;
-        sci.imageExtent = new VkExtent2D { width = (uint)window.Width, height = (uint)window.Height };
-        sci.minImageCount = imageCount;
-        sci.imageArrayLayers = 1;
-        sci.imageUsage = VkImageUsageFlags.ColorAttachment;
-
-        var queueFamilyIndices = vulkanPhysicalDevice.QueueFamilyIndices;
-
-        if (vulkanPhysicalDevice.QueueFamilyIndices.Graphics != vulkanPhysicalDevice.QueueFamilyIndices.Present)
-        {
-            uint first = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
-
-            sci.imageSharingMode = VkSharingMode.Concurrent;
-            sci.queueFamilyIndexCount = 2;
-            sci.pQueueFamilyIndices = &first;
-        }
-        else
-        {
-            sci.imageSharingMode = VkSharingMode.Exclusive;
-            sci.queueFamilyIndexCount = 0;
-        }
-
-        sci.preTransform = surfaceCapabilities.currentTransform;
-        sci.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
-        sci.clipped = true;
-
-        VkSwapchainKHR oldSwapchain = _swapchain;
-        sci.oldSwapchain = oldSwapchain;
-
-        vkCreateSwapchainKHR(vulkanLogicalDevice.Device, ref sci, null, out _swapchain);
-        if (oldSwapchain != 0)
-        {
-            vkDestroySwapchainKHR(vulkanLogicalDevice.Device, oldSwapchain, null);
-        }
-
+    private unsafe void CreateImageViewsUnsafe()
+    {
         // Get the images
-        uint scImageCount = 0;
-        vkGetSwapchainImagesKHR(vulkanLogicalDevice.Device, _swapchain, ref scImageCount, null);
-        _scImages.Count = scImageCount;
-        vkGetSwapchainImagesKHR(vulkanLogicalDevice.Device, _swapchain, ref scImageCount, out _scImages.Items[0]);
-
-        _scImageFormat = surfaceFormat.format;
-        _scExtent = sci.imageExtent;
-    }
-
-    private void CreateImageViews()
-    {
-        _scImageViews.Resize(_scImages.Count);
-        for (int i = 0; i < _scImages.Count; i++)
+        uint swapChainImageCount = 0;
+        var result = vkGetSwapchainImagesKHR(vulkanLogicalDevice.Device, swapchain, &swapChainImageCount, null);
+        if (result is not VkResult.Success)
         {
-            CreateImageViewUnsafe(_scImages[i], _scImageFormat, out _scImageViews[i]);
+            throw new ApplicationException("Failed to get swapchain images!");
+        }
+
+        var swapChainImages = stackalloc VkImage[(int)swapChainImageCount];
+        result = vkGetSwapchainImagesKHR(vulkanLogicalDevice.Device, swapchain, &swapChainImageCount, swapChainImages);
+        if (result is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to get swapchain images!");
+        }
+
+        imageViews = new RawList<VkImageView>(swapChainImageCount);
+
+        for (int i = 0; i < swapChainImageCount; i++)
+        {
+            var imageViewCreateInfo = VkImageViewCreateInfo.New();
+            imageViewCreateInfo.image = swapChainImages[i];
+            imageViewCreateInfo.viewType = VkImageViewType.Image2D;
+            imageViewCreateInfo.format = surfaceFormat.format;
+            imageViewCreateInfo.components.r = VkComponentSwizzle.Identity;
+            imageViewCreateInfo.components.g = VkComponentSwizzle.Identity;
+            imageViewCreateInfo.components.b = VkComponentSwizzle.Identity;
+            imageViewCreateInfo.components.a = VkComponentSwizzle.Identity;
+            imageViewCreateInfo.subresourceRange.aspectMask = VkImageAspectFlags.Color;
+            imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+            imageViewCreateInfo.subresourceRange.levelCount = 1;
+            imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+            imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+            var imageResult = vkCreateImageView(vulkanLogicalDevice.Device, ref imageViewCreateInfo, null, out var imageView);
+            if (imageResult is not VkResult.Success)
+            {
+                throw new ApplicationException("Failed to create image view!");
+            }
+
+            imageViews.Add(imageView);
         }
     }
 
-    private unsafe void CreateImageViewUnsafe(VkImage image, VkFormat format, out VkImageView imageView)
+    public void Dispose()
     {
-        VkImageViewCreateInfo imageViewCI = VkImageViewCreateInfo.New();
-        imageViewCI.image = image;
-        imageViewCI.viewType = VkImageViewType.Image2D;
-        imageViewCI.format = format;
-        imageViewCI.subresourceRange.aspectMask = VkImageAspectFlags.Color;
-        imageViewCI.subresourceRange.baseMipLevel = 0;
-        imageViewCI.subresourceRange.levelCount = 1;
-        imageViewCI.subresourceRange.baseArrayLayer = 0;
-        imageViewCI.subresourceRange.layerCount = 1;
-
-        vkCreateImageView(vulkanLogicalDevice.Device, ref imageViewCI, null, out imageView);
+        throw new NotImplementedException();
     }
 }
