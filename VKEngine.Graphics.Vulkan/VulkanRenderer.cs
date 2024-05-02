@@ -77,14 +77,14 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
     }
 }
 
-internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice,IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain swapChain) : IRenderer
+internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanCommandPool vulkanCommandPool) : IRenderer
 {
     private VkInstance _instance;
     private VkSurfaceKHR _surface;
     private VkPipelineLayout _pipelineLayout;
     private VkRenderPass _renderPass;
     private VkPipeline _graphicsPipeline;
-    private VkCommandPool _commandPool;
+    //private VkCommandPool _commandPool;
     private RawList<VkCommandBuffer> _commandBuffers = new RawList<VkCommandBuffer>();
     private VkSemaphore _imageAvailableSemaphore;
     private VkSemaphore _renderCompleteSemaphore;
@@ -135,16 +135,18 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         }
 
         CreateInstance();
-        CreateSurface();
         vulkanPhysicalDevice.Initialize(_instance);
         vulkanLogicalDevice.Initialize();
+        //vulkanSwapChain.Initialize(_instance);
+        CreateSurface();
         CreateSwapchain();
         CreateImageViews();
         CreateRenderPass();
         CreateDescriptorSetLayout();
         CreateGraphicsPipeline();
         CreateFramebuffers();
-        CreateCommandPool();
+        vulkanCommandPool.Initialize();
+        //CreateCommandPool();
         CreateTextureImage();
         CreateTextureImageView();
         CreateTextureSampler();
@@ -275,7 +277,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     private void CreateSurface()
     {
         var result = GLFW.CreateWindowSurface(_instance.Handle, window.NativeWindowHandle, IntPtr.Zero, out var surfacePtr);
-        if(result is not VkResult.Success)
+        if (result is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to create window surface.");
         }
@@ -560,12 +562,12 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         }
     }
 
-    private void CreateCommandPool()
-    {
-        VkCommandPoolCreateInfo commandPoolCI = VkCommandPoolCreateInfo.New();
-        commandPoolCI.queueFamilyIndex = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
-        vkCreateCommandPool(vulkanLogicalDevice.Device, ref commandPoolCI, null, out _commandPool);
-    }
+    //private void CreateCommandPool()
+    //{
+    //    VkCommandPoolCreateInfo commandPoolCI = VkCommandPoolCreateInfo.New();
+    //    commandPoolCI.queueFamilyIndex = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
+    //    vkCreateCommandPool(vulkanLogicalDevice.Device, ref commandPoolCI, null, out _commandPool);
+    //}
 
     private void CreateTextureImage()
     {
@@ -698,12 +700,12 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     {
         if (_commandBuffers.Count > 0)
         {
-            vkFreeCommandBuffers(vulkanLogicalDevice.Device, _commandPool, _scFramebuffers.Count, ref _commandBuffers[0]);
+            vkFreeCommandBuffers(vulkanLogicalDevice.Device, vulkanCommandPool.Raw, _scFramebuffers.Count, ref _commandBuffers[0]);
         }
 
         _commandBuffers.Resize(_scFramebuffers.Count);
         VkCommandBufferAllocateInfo commandBufferAI = VkCommandBufferAllocateInfo.New();
-        commandBufferAI.commandPool = _commandPool;
+        commandBufferAI.commandPool = vulkanCommandPool.Raw;
         commandBufferAI.level = VkCommandBufferLevel.Primary;
         commandBufferAI.commandBufferCount = _commandBuffers.Count;
         vkAllocateCommandBuffers(vulkanLogicalDevice.Device, ref commandBufferAI, out _commandBuffers[0]);
@@ -950,7 +952,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     {
         VkCommandBufferAllocateInfo allocInfo = VkCommandBufferAllocateInfo.New();
         allocInfo.commandBufferCount = 1;
-        allocInfo.commandPool = _commandPool;
+        allocInfo.commandPool = vulkanCommandPool.Raw;
         allocInfo.level = VkCommandBufferLevel.Primary;
 
         vkAllocateCommandBuffers(vulkanLogicalDevice.Device, ref allocInfo, out VkCommandBuffer cb);
@@ -971,11 +973,11 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cb;
 
-        
+
         vkQueueSubmit(vulkanLogicalDevice.GraphicsQueue, 1, &submitInfo, VkFence.Null);
         vkQueueWaitIdle(vulkanLogicalDevice.GraphicsQueue);
 
-        vkFreeCommandBuffers(vulkanLogicalDevice.Device, _commandPool, 1, ref cb);
+        vkFreeCommandBuffers(vulkanLogicalDevice.Device, vulkanCommandPool.Raw, 1, ref cb);
     }
 
     private void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
