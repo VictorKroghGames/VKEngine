@@ -104,14 +104,4 @@ internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysical
         }
         return rawList;
     }
-
-    void IGraphicsContext.Initialize()
-    {
-        throw new NotImplementedException();
-    }
-
-    void IDisposable.Dispose()
-    {
-        throw new NotImplementedException();
-    }
 }
