@@ -87,6 +87,13 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
 
     public void Dispose()
     {
+        for (int i = 0; i < imageViews.Count; i++)
+        {
+            vkDestroyImageView(vulkanLogicalDevice.Device, imageViews[i], IntPtr.Zero);
+        }
+
+        //vkDestroySurfaceKHR(((IVulkanGraphicsContext)graphicsContext).Instance, surface, IntPtr.Zero);
+        vkDestroySwapchainKHR(vulkanLogicalDevice.Device, swapchain, IntPtr.Zero);
     }
 
     private unsafe void CreateSurfaceUnsafe(VkInstance vkInstance)
