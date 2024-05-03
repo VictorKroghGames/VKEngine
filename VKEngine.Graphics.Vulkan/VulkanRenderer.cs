@@ -81,8 +81,6 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
 internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanPipeline vulkanPipeline, IVulkanCommandPoolFactory vulkanCommandPoolFactory, IVulkanRenderPassFactory vulkanRenderPassFactory, IShaderLibrary shaderLibrary) : ITestRenderer
 {
     private VkPipelineLayout _pipelineLayout;
-    //private VkPipeline _graphicsPipeline;
-    //private RawList<VkCommandBuffer> _commandBuffers = new RawList<VkCommandBuffer>();
     private VkSemaphore _imageAvailableSemaphore;
     private VkSemaphore _renderCompleteSemaphore;
     private VkBuffer _vertexBuffer;
@@ -249,89 +247,6 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         vkCreatePipelineLayout(vulkanLogicalDevice.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
 
         vulkanPipeline.Initialize(shader, renderPass.Raw, _pipelineLayout);
-
-        //var shaderModules = shader.GetShaderModules();
-
-        //var pipelineShaderStaeCreateInfos = shaderModules.Select(module =>
-        //{
-        //    var pipelineShaderStaeCreateInfo = VkPipelineShaderStageCreateInfo.New();
-        //    pipelineShaderStaeCreateInfo.stage = module.ShaderStageFlags;
-        //    pipelineShaderStaeCreateInfo.module = module.Module;
-        //    pipelineShaderStaeCreateInfo.pName = module.MainFunctionIdentifier;
-        //    return pipelineShaderStaeCreateInfo;
-        //});
-
-        //VkPipelineVertexInputStateCreateInfo vertexInputStateCI = VkPipelineVertexInputStateCreateInfo.New();
-        //var vertexBindingDesc = Vertex.GetBindingDescription();
-        //var attributeDescr = Vertex.GetAttributeDescriptions();
-        //vertexInputStateCI.vertexBindingDescriptionCount = 1;
-        //vertexInputStateCI.pVertexBindingDescriptions = &vertexBindingDesc;
-        //vertexInputStateCI.vertexAttributeDescriptionCount = attributeDescr.Count;
-        //vertexInputStateCI.pVertexAttributeDescriptions = &attributeDescr.First;
-
-        //VkPipelineInputAssemblyStateCreateInfo inputAssemblyCI = VkPipelineInputAssemblyStateCreateInfo.New();
-        //inputAssemblyCI.primitiveRestartEnable = false;
-        //inputAssemblyCI.topology = VkPrimitiveTopology.TriangleList;
-
-        //VkViewport viewport = new VkViewport();
-        //viewport.x = 0;
-        //viewport.y = 0;
-        //viewport.width = window.Width;
-        //viewport.height = window.Height;
-        //viewport.minDepth = 0f;
-        //viewport.maxDepth = 1f;
-
-        //VkRect2D scissorRect = new VkRect2D(vulkanSwapChain.Extent);
-
-        //VkPipelineViewportStateCreateInfo viewportStateCI = VkPipelineViewportStateCreateInfo.New();
-        //viewportStateCI.viewportCount = 1;
-        //viewportStateCI.pViewports = &viewport;
-        //viewportStateCI.scissorCount = 1;
-        //viewportStateCI.pScissors = &scissorRect;
-
-        //VkPipelineRasterizationStateCreateInfo rasterizerStateCI = VkPipelineRasterizationStateCreateInfo.New();
-        //rasterizerStateCI.cullMode = VkCullModeFlags.Back;
-        //rasterizerStateCI.polygonMode = VkPolygonMode.Fill;
-        //rasterizerStateCI.lineWidth = 1f;
-        //rasterizerStateCI.frontFace = VkFrontFace.CounterClockwise;
-
-        //VkPipelineMultisampleStateCreateInfo multisampleStateCI = VkPipelineMultisampleStateCreateInfo.New();
-        //multisampleStateCI.rasterizationSamples = VkSampleCountFlags.Count1;
-        //multisampleStateCI.minSampleShading = 1f;
-
-        //VkPipelineColorBlendAttachmentState colorBlendAttachementState = new VkPipelineColorBlendAttachmentState();
-        //colorBlendAttachementState.colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A;
-        //colorBlendAttachementState.blendEnable = false;
-
-        //VkPipelineColorBlendStateCreateInfo colorBlendStateCI = VkPipelineColorBlendStateCreateInfo.New();
-        //colorBlendStateCI.attachmentCount = 1;
-        //colorBlendStateCI.pAttachments = &colorBlendAttachementState;
-
-        //VkDescriptorSetLayout dsl = _descriptoSetLayout;
-        //VkPipelineLayoutCreateInfo pipelineLayoutCI = VkPipelineLayoutCreateInfo.New();
-        //pipelineLayoutCI.setLayoutCount = 1;
-        //pipelineLayoutCI.pSetLayouts = &dsl;
-        //vkCreatePipelineLayout(vulkanLogicalDevice.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
-
-        //fixed (VkPipelineShaderStageCreateInfo* pipelineShaderStageCreateInfoPtr = &pipelineShaderStaeCreateInfos.ToArray()[0])
-        //{
-        //    VkGraphicsPipelineCreateInfo graphicsPipelineCI = VkGraphicsPipelineCreateInfo.New();
-        //    graphicsPipelineCI.stageCount = (uint)pipelineShaderStaeCreateInfos.Count();
-        //    graphicsPipelineCI.pStages = pipelineShaderStageCreateInfoPtr;
-
-        //    graphicsPipelineCI.pVertexInputState = &vertexInputStateCI;
-        //    graphicsPipelineCI.pInputAssemblyState = &inputAssemblyCI;
-        //    graphicsPipelineCI.pViewportState = &viewportStateCI;
-        //    graphicsPipelineCI.pRasterizationState = &rasterizerStateCI;
-        //    graphicsPipelineCI.pMultisampleState = &multisampleStateCI;
-        //    graphicsPipelineCI.pColorBlendState = &colorBlendStateCI;
-        //    graphicsPipelineCI.layout = _pipelineLayout;
-
-        //    graphicsPipelineCI.renderPass = renderPass.Raw;
-        //    graphicsPipelineCI.subpass = 0;
-
-        //    var result = vkCreateGraphicsPipelines(vulkanLogicalDevice.Device, VkPipelineCache.Null, 1, ref graphicsPipelineCI, null, out _graphicsPipeline);
-        //}
     }
 
     private void CreateFramebuffers()
