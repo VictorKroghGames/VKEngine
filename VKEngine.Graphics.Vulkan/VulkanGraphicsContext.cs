@@ -36,11 +36,11 @@ internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysical
 
     public void Dispose()
     {
-        vkDestroyInstance(instance, IntPtr.Zero);
-
-        vulkanPhysicalDevice.Dispose();
-        vulkanLogicalDevice.Dispose();
         vulkanSwapChain.Dispose();
+        vulkanLogicalDevice.Dispose();
+        vulkanPhysicalDevice.Dispose();
+
+        vkDestroyInstance(instance, IntPtr.Zero);
     }
 
     private unsafe VkResult CreateInstanceUnsafe()

@@ -3,7 +3,13 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-public interface IVulkanCommandPool
+public interface IVulkanCommandBufferAllocator
+{
+    IEnumerable<IVulkanCommandBuffer> AllocateCommandBuffers(uint count);
+    void FreeCommandBuffers(uint count, IEnumerable<IVulkanCommandBuffer> commandBuffers);
+}
+
+public interface IVulkanCommandPool : IVulkanCommandBufferAllocator
 {
     VkCommandPool Raw { get; }
 
@@ -35,6 +41,41 @@ internal sealed class VulkanCommandPool(IVulkanPhysicalDevice vulkanPhysicalDevi
     {
         VkCommandPoolCreateInfo commandPoolCI = VkCommandPoolCreateInfo.New();
         commandPoolCI.queueFamilyIndex = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
-        vkCreateCommandPool(vulkanLogicalDevice.Device, ref commandPoolCI, null, out commandPool);
+        var result = vkCreateCommandPool(vulkanLogicalDevice.Device, ref commandPoolCI, null, out commandPool);
+        if (result is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to create command pool!");
+        }
+    }
+
+    public unsafe IEnumerable<IVulkanCommandBuffer> AllocateCommandBuffers(uint count)
+    {
+        if (commandPool == VkCommandPool.Null)
+        {
+            CreateCommandPoolUnsafe();
+        }
+
+        VkCommandBufferAllocateInfo commandBufferAllocateInfo = VkCommandBufferAllocateInfo.New();
+        commandBufferAllocateInfo.commandPool = commandPool;
+        commandBufferAllocateInfo.level = VkCommandBufferLevel.Primary;
+        commandBufferAllocateInfo.commandBufferCount = count;
+
+        var commandBuffers = new VkCommandBuffer[count];
+
+        var result = vkAllocateCommandBuffers(vulkanLogicalDevice.Device, ref commandBufferAllocateInfo, out commandBuffers[0]);
+        if (result is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to allocate command buffer(s)!");
+        }
+
+        return commandBuffers.Select(cb => new VulkanCommandBuffer(cb));
+    }
+
+    public unsafe void FreeCommandBuffers(uint count, IEnumerable<IVulkanCommandBuffer> commandBuffers)
+    {
+        fixed (VkCommandBuffer* commandBufferPtr = &commandBuffers.Select(x => x.Raw).ToArray()[0])
+        {
+            vkFreeCommandBuffers(vulkanLogicalDevice.Device, commandPool, count, commandBufferPtr);
+        }
     }
 }

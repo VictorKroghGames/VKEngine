@@ -13,6 +13,7 @@ public interface IVulkanLogicalDevice : IDisposable
     VkQueue PresentQueue { get; }
 
     void Initialize();
+    void WaitIdle();
 }
 
 internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDevice) : IVulkanLogicalDevice
@@ -36,6 +37,7 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
         }
 
         var deviceFeatures = new VkPhysicalDeviceFeatures();
+        deviceFeatures.samplerAnisotropy = false;
         CreateLogicalDeviceUnsafe(vulkanPhysicalDevice, deviceFeatures);
 
         vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Graphics, 0, out graphicsQueue);
@@ -44,8 +46,14 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
         isInitialized = true;
     }
 
+    public void WaitIdle()
+    {
+        vkDeviceWaitIdle(device);
+    }
+
     public void Dispose()
     {
+        vkDestroyDevice(device, IntPtr.Zero);
     }
 
     private unsafe VkResult CreateLogicalDeviceUnsafe(IVulkanPhysicalDevice vulkanPhysicalDevice, VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures)

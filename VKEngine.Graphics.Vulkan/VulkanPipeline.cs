@@ -7,7 +7,7 @@ public interface IVulkanPipeline
 {
     VkPipeline Raw { get; }
 
-    void Initialize(IShader shader, VkPipelineLayout pipelineLayout);
+    void Initialize(IShader shader, VkRenderPass vkRenderPass, VkPipelineLayout pipelineLayout);
 }
 
 internal sealed class VulkanPipeline(IWindow window, IVulkanLogicalDevice vulkanLogicalDevice) : IVulkanPipeline
@@ -16,43 +16,88 @@ internal sealed class VulkanPipeline(IWindow window, IVulkanLogicalDevice vulkan
 
     public VkPipeline Raw => graphicsPipeline;
 
-    public void Initialize(IShader shader, VkPipelineLayout pipelineLayout)
+    public unsafe void Initialize(IShader shader, VkRenderPass renderPass, VkPipelineLayout pipelineLayout)
     {
-        var pipelineShaderStaeCreateInfos = GetPipelineShaderStageCreateInfoUnsafe(shader);
-        var pipelineVertexInputStateCreateInfo = GetPipelineVertexInputStateCreateInfoUnsafe();
-        var pipelineInputAssemblyStateCreateInfo = GetPipelineInputAssemblyStateCreateInfo();
-        var pipelineViewportStateCreateInfo = GetPipelineViewportStateCreateInfoUnsafe();
-        var pipelineRasterizationStateCreateInfo = GetPipelineRasterizationStateCreateInfo();
-        var pipelineMultisampleStateCreateInfo = GetVkPipelineMultisampleStateCreateInfo();
-        var pipelineColorBlendStateCreateInfo = GetVkPipelineColorBlendStateCreateInfoUnsafe();
-
-        var result = CreateGraphicsPipeline(pipelineShaderStaeCreateInfos, pipelineVertexInputStateCreateInfo, pipelineInputAssemblyStateCreateInfo, pipelineViewportStateCreateInfo, pipelineRasterizationStateCreateInfo, pipelineMultisampleStateCreateInfo, pipelineColorBlendStateCreateInfo, pipelineLayout);
-        if (result != VkResult.Success) 
+        if (shader is not IVulkanShader vulkanShader)
         {
-            throw new ApplicationException("Failed to create graphics pipeline");
+            throw new Exception("Shader must be of type IVulkanShader");
         }
-    }
 
-    private unsafe VkResult CreateGraphicsPipeline(IEnumerable<VkPipelineShaderStageCreateInfo> pipelineShaderStageCreateInfos, VkPipelineVertexInputStateCreateInfo vertexInputStateCI, VkPipelineInputAssemblyStateCreateInfo inputAssemblyCI, VkPipelineViewportStateCreateInfo viewportStateCI, VkPipelineRasterizationStateCreateInfo rasterizerStateCI, VkPipelineMultisampleStateCreateInfo multisampleStateCI, VkPipelineColorBlendStateCreateInfo colorBlendStateCI, VkPipelineLayout pipelineLayout)
-    {
-        fixed (VkPipelineShaderStageCreateInfo* pipelineShaderStageCreateInfoPtr = &pipelineShaderStageCreateInfos.ToArray()[0])
+        var shaderModules = vulkanShader.GetShaderModules();
+
+        var pipelineShaderStaeCreateInfos = shaderModules.Select(module =>
         {
-            VkGraphicsPipelineCreateInfo graphicsPipelineCI = VkGraphicsPipelineCreateInfo.New();
-            graphicsPipelineCI.stageCount = (uint)pipelineShaderStageCreateInfos.Count();
-            graphicsPipelineCI.pStages = pipelineShaderStageCreateInfoPtr;
+            var pipelineShaderStaeCreateInfo = VkPipelineShaderStageCreateInfo.New();
+            pipelineShaderStaeCreateInfo.stage = module.ShaderStageFlags;
+            pipelineShaderStaeCreateInfo.module = module.Module;
+            pipelineShaderStaeCreateInfo.pName = module.MainFunctionIdentifier;
+            return pipelineShaderStaeCreateInfo;
+        }).ToArray();
 
-            graphicsPipelineCI.pVertexInputState = &vertexInputStateCI;
-            graphicsPipelineCI.pInputAssemblyState = &inputAssemblyCI;
-            graphicsPipelineCI.pViewportState = &viewportStateCI;
-            graphicsPipelineCI.pRasterizationState = &rasterizerStateCI;
-            graphicsPipelineCI.pMultisampleState = &multisampleStateCI;
-            graphicsPipelineCI.pColorBlendState = &colorBlendStateCI;
-            graphicsPipelineCI.layout = pipelineLayout;
+        var pipelineVertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.New();
+        var vertexBindingDesc = Vertex.GetBindingDescription();
+        var attributeDescr = Vertex.GetAttributeDescriptions();
+        pipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
+        pipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = &vertexBindingDesc;
+        pipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = attributeDescr.Count;
+        pipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions = &attributeDescr.First;
 
-            //graphicsPipelineCI.renderPass = _renderPass;
-            //graphicsPipelineCI.subpass = 0;
+        var pipelineInputAssemblyStateCreateInfo = VkPipelineInputAssemblyStateCreateInfo.New();
+        pipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = false;
+        pipelineInputAssemblyStateCreateInfo.topology = VkPrimitiveTopology.TriangleList;
 
-            return vkCreateGraphicsPipelines(vulkanLogicalDevice.Device, VkPipelineCache.Null, 1, ref graphicsPipelineCI, null, out graphicsPipeline);
+        var viewport = GetViewport();
+
+        var extent = new VkExtent2D(window.Width, window.Height);
+
+        VkRect2D scissorRect = new(extent);
+
+        var pipelineViewportStateCreateInfo = VkPipelineViewportStateCreateInfo.New();
+        pipelineViewportStateCreateInfo.viewportCount = 1;
+        pipelineViewportStateCreateInfo.pViewports = &viewport;
+        pipelineViewportStateCreateInfo.scissorCount = 1;
+        pipelineViewportStateCreateInfo.pScissors = &scissorRect;
+
+        var pipelineRasterizationStateCreateInfo = VkPipelineRasterizationStateCreateInfo.New();
+        pipelineRasterizationStateCreateInfo.cullMode = VkCullModeFlags.Back;
+        pipelineRasterizationStateCreateInfo.polygonMode = VkPolygonMode.Fill;
+        pipelineRasterizationStateCreateInfo.lineWidth = 1f;
+        pipelineRasterizationStateCreateInfo.frontFace = VkFrontFace.CounterClockwise;
+
+        var pipelineMultisampleStateCreateInfo = VkPipelineMultisampleStateCreateInfo.New();
+        pipelineMultisampleStateCreateInfo.rasterizationSamples = VkSampleCountFlags.Count1;
+        pipelineMultisampleStateCreateInfo.minSampleShading = 1f;
+
+        var colorBlendAttachementState = new VkPipelineColorBlendAttachmentState();
+        colorBlendAttachementState.colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A;
+        colorBlendAttachementState.blendEnable = false;
+
+        var pipelineColorBlendStateCreateInfo = VkPipelineColorBlendStateCreateInfo.New();
+        pipelineColorBlendStateCreateInfo.attachmentCount = 1;
+        pipelineColorBlendStateCreateInfo.pAttachments = &colorBlendAttachementState;
+
+        fixed (VkPipelineShaderStageCreateInfo* pipelineShaderStageCreateInfoPtr = &pipelineShaderStaeCreateInfos.ToArray()[0])
+        {
+            VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfo = VkGraphicsPipelineCreateInfo.New();
+            graphicsPipelineCreateInfo.stageCount = (uint)pipelineShaderStaeCreateInfos.Count();
+            graphicsPipelineCreateInfo.pStages = pipelineShaderStageCreateInfoPtr;
+
+            graphicsPipelineCreateInfo.pVertexInputState = &pipelineVertexInputStateCreateInfo;
+            graphicsPipelineCreateInfo.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo;
+            graphicsPipelineCreateInfo.pViewportState = &pipelineViewportStateCreateInfo;
+            graphicsPipelineCreateInfo.pRasterizationState = &pipelineRasterizationStateCreateInfo;
+            graphicsPipelineCreateInfo.pMultisampleState = &pipelineMultisampleStateCreateInfo;
+            graphicsPipelineCreateInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
+            graphicsPipelineCreateInfo.layout = pipelineLayout;
+
+            graphicsPipelineCreateInfo.renderPass = renderPass;
+            graphicsPipelineCreateInfo.subpass = 0;
+
+            var result = vkCreateGraphicsPipelines(vulkanLogicalDevice.Device, VkPipelineCache.Null, 1, ref graphicsPipelineCreateInfo, null, out graphicsPipeline);
+            if (result != VkResult.Success)
+            {
+                throw new ApplicationException("Failed to create graphics pipeline");
+            }
         }
     }
 

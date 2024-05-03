@@ -26,11 +26,12 @@ internal struct Vertex
 
     public static VkVertexInputBindingDescription GetBindingDescription()
     {
-        VkVertexInputBindingDescription bindingDescription = new VkVertexInputBindingDescription();
-        bindingDescription.inputRate = VkVertexInputRate.Vertex;
-        bindingDescription.stride = (uint)Unsafe.SizeOf<Vertex>();
-        bindingDescription.binding = 0;
-        return bindingDescription;
+        return new VkVertexInputBindingDescription()
+        {
+            inputRate = VkVertexInputRate.Vertex,
+            stride = (uint)Unsafe.SizeOf<Vertex>(),
+            binding = 0
+        };
     }
 
     public static FixedArray3<VkVertexInputAttributeDescription> GetAttributeDescriptions()
@@ -77,11 +78,11 @@ public unsafe static class VkPhysicalDeviceMemoryPropertiesEx
     }
 }
 
-internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanCommandPool vulkanCommandPool, IShaderLibrary shaderLibrary, IVulkanPipeline vulkanPipeline) : ITestRenderer
+internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain, IVulkanPipeline vulkanPipeline, IVulkanCommandPoolFactory vulkanCommandPoolFactory, IVulkanRenderPassFactory vulkanRenderPassFactory, IShaderLibrary shaderLibrary) : ITestRenderer
 {
     private VkPipelineLayout _pipelineLayout;
-    private VkRenderPass _renderPass;
-    private RawList<VkCommandBuffer> _commandBuffers = new RawList<VkCommandBuffer>();
+    //private VkPipeline _graphicsPipeline;
+    //private RawList<VkCommandBuffer> _commandBuffers = new RawList<VkCommandBuffer>();
     private VkSemaphore _imageAvailableSemaphore;
     private VkSemaphore _renderCompleteSemaphore;
     private VkBuffer _vertexBuffer;
@@ -99,6 +100,10 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
     private VkDeviceMemory _textureImageMemory;
     private VkImageView _textureImageView;
     private VkSampler _textureSampler;
+
+    private IVulkanRenderPass renderPass;
+    private IVulkanCommandPool commandPool;
+    private IVulkanCommandBuffer[] commandBuffers = [];
 
     private RawList<VkFramebuffer> _scFramebuffers = new RawList<VkFramebuffer>();
 
@@ -119,11 +124,11 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     public void Initialize()
     {
-        CreateRenderPass();
+        renderPass = vulkanRenderPassFactory.CreateRenderPass();
         CreateDescriptorSetLayout();
         CreateGraphicsPipeline();
         CreateFramebuffers();
-        vulkanCommandPool.Initialize();
+        commandPool = vulkanCommandPoolFactory.CreateCommandPool();
         CreateTextureImage();
         CreateTextureImageView();
         CreateTextureSampler();
@@ -186,7 +191,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = &waitSemaphore;
         submitInfo.pWaitDstStageMask = &waitStages;
-        VkCommandBuffer cb = _commandBuffers[imageIndex];
+        VkCommandBuffer cb = commandBuffers[imageIndex].Raw;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cb;
         VkSemaphore signalSemaphore = _renderCompleteSemaphore;
@@ -204,47 +209,6 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         presentInfo.pImageIndices = &imageIndex;
 
         vkQueuePresentKHR(vulkanLogicalDevice.PresentQueue, ref presentInfo);
-    }
-
-    private void CreateRenderPass()
-    {
-        VkAttachmentDescription colorAttachment = new VkAttachmentDescription();
-        colorAttachment.format = vulkanSwapChain.SurfaceFormat.format;
-        colorAttachment.samples = VkSampleCountFlags.Count1;
-        colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
-        colorAttachment.storeOp = VkAttachmentStoreOp.Store;
-        colorAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
-        colorAttachment.stencilStoreOp = VkAttachmentStoreOp.DontCare;
-        colorAttachment.initialLayout = VkImageLayout.Undefined;
-        colorAttachment.finalLayout = VkImageLayout.PresentSrcKHR;
-
-        VkAttachmentReference colorAttachmentRef = new VkAttachmentReference();
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VkImageLayout.ColorAttachmentOptimal;
-
-        VkSubpassDescription subpass = new VkSubpassDescription();
-        subpass.pipelineBindPoint = VkPipelineBindPoint.Graphics;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
-
-        VkRenderPassCreateInfo renderPassCI = VkRenderPassCreateInfo.New();
-        renderPassCI.attachmentCount = 1;
-        renderPassCI.pAttachments = &colorAttachment;
-        renderPassCI.subpassCount = 1;
-        renderPassCI.pSubpasses = &subpass;
-
-        VkSubpassDependency dependency = new VkSubpassDependency();
-        dependency.srcSubpass = SubpassExternal;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-        dependency.dstAccessMask = VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite;
-
-        renderPassCI.dependencyCount = 1;
-        renderPassCI.pDependencies = &dependency;
-
-        vkCreateRenderPass(vulkanLogicalDevice.Device, ref renderPassCI, null, out _renderPass);
     }
 
     private void CreateDescriptorSetLayout()
@@ -284,7 +248,90 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         pipelineLayoutCI.pSetLayouts = &dsl;
         vkCreatePipelineLayout(vulkanLogicalDevice.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
 
-        vulkanPipeline.Initialize(shader, _pipelineLayout);
+        vulkanPipeline.Initialize(shader, renderPass.Raw, _pipelineLayout);
+
+        //var shaderModules = shader.GetShaderModules();
+
+        //var pipelineShaderStaeCreateInfos = shaderModules.Select(module =>
+        //{
+        //    var pipelineShaderStaeCreateInfo = VkPipelineShaderStageCreateInfo.New();
+        //    pipelineShaderStaeCreateInfo.stage = module.ShaderStageFlags;
+        //    pipelineShaderStaeCreateInfo.module = module.Module;
+        //    pipelineShaderStaeCreateInfo.pName = module.MainFunctionIdentifier;
+        //    return pipelineShaderStaeCreateInfo;
+        //});
+
+        //VkPipelineVertexInputStateCreateInfo vertexInputStateCI = VkPipelineVertexInputStateCreateInfo.New();
+        //var vertexBindingDesc = Vertex.GetBindingDescription();
+        //var attributeDescr = Vertex.GetAttributeDescriptions();
+        //vertexInputStateCI.vertexBindingDescriptionCount = 1;
+        //vertexInputStateCI.pVertexBindingDescriptions = &vertexBindingDesc;
+        //vertexInputStateCI.vertexAttributeDescriptionCount = attributeDescr.Count;
+        //vertexInputStateCI.pVertexAttributeDescriptions = &attributeDescr.First;
+
+        //VkPipelineInputAssemblyStateCreateInfo inputAssemblyCI = VkPipelineInputAssemblyStateCreateInfo.New();
+        //inputAssemblyCI.primitiveRestartEnable = false;
+        //inputAssemblyCI.topology = VkPrimitiveTopology.TriangleList;
+
+        //VkViewport viewport = new VkViewport();
+        //viewport.x = 0;
+        //viewport.y = 0;
+        //viewport.width = window.Width;
+        //viewport.height = window.Height;
+        //viewport.minDepth = 0f;
+        //viewport.maxDepth = 1f;
+
+        //VkRect2D scissorRect = new VkRect2D(vulkanSwapChain.Extent);
+
+        //VkPipelineViewportStateCreateInfo viewportStateCI = VkPipelineViewportStateCreateInfo.New();
+        //viewportStateCI.viewportCount = 1;
+        //viewportStateCI.pViewports = &viewport;
+        //viewportStateCI.scissorCount = 1;
+        //viewportStateCI.pScissors = &scissorRect;
+
+        //VkPipelineRasterizationStateCreateInfo rasterizerStateCI = VkPipelineRasterizationStateCreateInfo.New();
+        //rasterizerStateCI.cullMode = VkCullModeFlags.Back;
+        //rasterizerStateCI.polygonMode = VkPolygonMode.Fill;
+        //rasterizerStateCI.lineWidth = 1f;
+        //rasterizerStateCI.frontFace = VkFrontFace.CounterClockwise;
+
+        //VkPipelineMultisampleStateCreateInfo multisampleStateCI = VkPipelineMultisampleStateCreateInfo.New();
+        //multisampleStateCI.rasterizationSamples = VkSampleCountFlags.Count1;
+        //multisampleStateCI.minSampleShading = 1f;
+
+        //VkPipelineColorBlendAttachmentState colorBlendAttachementState = new VkPipelineColorBlendAttachmentState();
+        //colorBlendAttachementState.colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A;
+        //colorBlendAttachementState.blendEnable = false;
+
+        //VkPipelineColorBlendStateCreateInfo colorBlendStateCI = VkPipelineColorBlendStateCreateInfo.New();
+        //colorBlendStateCI.attachmentCount = 1;
+        //colorBlendStateCI.pAttachments = &colorBlendAttachementState;
+
+        //VkDescriptorSetLayout dsl = _descriptoSetLayout;
+        //VkPipelineLayoutCreateInfo pipelineLayoutCI = VkPipelineLayoutCreateInfo.New();
+        //pipelineLayoutCI.setLayoutCount = 1;
+        //pipelineLayoutCI.pSetLayouts = &dsl;
+        //vkCreatePipelineLayout(vulkanLogicalDevice.Device, ref pipelineLayoutCI, null, out _pipelineLayout);
+
+        //fixed (VkPipelineShaderStageCreateInfo* pipelineShaderStageCreateInfoPtr = &pipelineShaderStaeCreateInfos.ToArray()[0])
+        //{
+        //    VkGraphicsPipelineCreateInfo graphicsPipelineCI = VkGraphicsPipelineCreateInfo.New();
+        //    graphicsPipelineCI.stageCount = (uint)pipelineShaderStaeCreateInfos.Count();
+        //    graphicsPipelineCI.pStages = pipelineShaderStageCreateInfoPtr;
+
+        //    graphicsPipelineCI.pVertexInputState = &vertexInputStateCI;
+        //    graphicsPipelineCI.pInputAssemblyState = &inputAssemblyCI;
+        //    graphicsPipelineCI.pViewportState = &viewportStateCI;
+        //    graphicsPipelineCI.pRasterizationState = &rasterizerStateCI;
+        //    graphicsPipelineCI.pMultisampleState = &multisampleStateCI;
+        //    graphicsPipelineCI.pColorBlendState = &colorBlendStateCI;
+        //    graphicsPipelineCI.layout = _pipelineLayout;
+
+        //    graphicsPipelineCI.renderPass = renderPass.Raw;
+        //    graphicsPipelineCI.subpass = 0;
+
+        //    var result = vkCreateGraphicsPipelines(vulkanLogicalDevice.Device, VkPipelineCache.Null, 1, ref graphicsPipelineCI, null, out _graphicsPipeline);
+        //}
     }
 
     private void CreateFramebuffers()
@@ -294,7 +341,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         {
             VkImageView attachment = vulkanSwapChain.ImageViews[i];
             VkFramebufferCreateInfo framebufferCI = VkFramebufferCreateInfo.New();
-            framebufferCI.renderPass = _renderPass;
+            framebufferCI.renderPass = renderPass.Raw;
             framebufferCI.attachmentCount = 1;
             framebufferCI.pAttachments = &attachment;
             framebufferCI.width = vulkanSwapChain.Extent.width;
@@ -383,7 +430,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         VkSamplerCreateInfo samplerCI = VkSamplerCreateInfo.New();
         samplerCI.magFilter = VkFilter.Linear;
         samplerCI.minFilter = VkFilter.Linear;
-        samplerCI.anisotropyEnable = true;
+        samplerCI.anisotropyEnable = false;
         samplerCI.maxAnisotropy = 16;
         samplerCI.borderColor = VkBorderColor.IntOpaqueBlack;
         samplerCI.unnormalizedCoordinates = false;
@@ -434,28 +481,23 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
     private void CreateCommandBuffers()
     {
-        if (_commandBuffers.Count > 0)
+        if (commandBuffers.Length != 0)
         {
-            vkFreeCommandBuffers(vulkanLogicalDevice.Device, vulkanCommandPool.Raw, _scFramebuffers.Count, ref _commandBuffers[0]);
+            commandPool.FreeCommandBuffers(_scFramebuffers.Count, commandBuffers);
         }
 
-        _commandBuffers.Resize(_scFramebuffers.Count);
-        VkCommandBufferAllocateInfo commandBufferAI = VkCommandBufferAllocateInfo.New();
-        commandBufferAI.commandPool = vulkanCommandPool.Raw;
-        commandBufferAI.level = VkCommandBufferLevel.Primary;
-        commandBufferAI.commandBufferCount = _commandBuffers.Count;
-        vkAllocateCommandBuffers(vulkanLogicalDevice.Device, ref commandBufferAI, out _commandBuffers[0]);
+        commandBuffers = commandPool.AllocateCommandBuffers(_scFramebuffers.Count).ToArray();
 
-        for (uint i = 0; i < _commandBuffers.Count; i++)
+        for (int i = 0; i < commandBuffers.Length; i++)
         {
-            VkCommandBuffer cb = _commandBuffers[i];
+            var commandBuffer = commandBuffers.ElementAt(i);
 
-            VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.New();
-            beginInfo.flags = VkCommandBufferUsageFlags.SimultaneousUse;
-            vkBeginCommandBuffer(cb, ref beginInfo);
+            commandBuffer.Begin();
+
+            var cb = commandBuffer.Raw;
 
             VkRenderPassBeginInfo rpbi = VkRenderPassBeginInfo.New();
-            rpbi.renderPass = _renderPass;
+            rpbi.renderPass = renderPass.Raw;
             rpbi.framebuffer = _scFramebuffers[i];
             rpbi.renderArea.extent = vulkanSwapChain.Extent;
 
@@ -465,7 +507,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
             vkCmdBeginRenderPass(cb, ref rpbi, VkSubpassContents.Inline);
 
-            vkCmdBindPipeline(cb, VkPipelineBindPoint.Graphics, vulkanPipeline.Raw);
+            vkCmdBindPipeline(cb, VkPipelineBindPoint.Graphics, vulkanPipeline.Raw); //  _graphicsPipeline
 
             vkCmdBindDescriptorSets(
                 cb,
@@ -485,7 +527,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
             vkCmdEndRenderPass(cb);
 
-            vkEndCommandBuffer(cb);
+            commandBuffer.End();
         }
     }
 
@@ -666,29 +708,17 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
 
         //CreateSwapchain();
         //CreateImageViews();
-        CreateRenderPass();
+        //CreateRenderPass();
         CreateGraphicsPipeline();
         CreateFramebuffers();
         CreateCommandBuffers();
-    }
-
-    private VkShaderModule CreateShader(byte[] bytecode)
-    {
-        VkShaderModuleCreateInfo smci = VkShaderModuleCreateInfo.New();
-        fixed (byte* byteCodePtr = bytecode)
-        {
-            smci.pCode = (uint*)byteCodePtr;
-            smci.codeSize = new UIntPtr((uint)bytecode.Length);
-            vkCreateShaderModule(vulkanLogicalDevice.Device, ref smci, null, out VkShaderModule module);
-            return module;
-        }
     }
 
     private VkCommandBuffer BeginOneTimeCommands()
     {
         VkCommandBufferAllocateInfo allocInfo = VkCommandBufferAllocateInfo.New();
         allocInfo.commandBufferCount = 1;
-        allocInfo.commandPool = vulkanCommandPool.Raw;
+        allocInfo.commandPool = commandPool.Raw;
         allocInfo.level = VkCommandBufferLevel.Primary;
 
         vkAllocateCommandBuffers(vulkanLogicalDevice.Device, ref allocInfo, out VkCommandBuffer cb);
@@ -713,7 +743,7 @@ internal sealed unsafe class VulkanRenderer(IWindow window, IVulkanPhysicalDevic
         vkQueueSubmit(vulkanLogicalDevice.GraphicsQueue, 1, &submitInfo, VkFence.Null);
         vkQueueWaitIdle(vulkanLogicalDevice.GraphicsQueue);
 
-        vkFreeCommandBuffers(vulkanLogicalDevice.Device, vulkanCommandPool.Raw, 1, ref cb);
+        vkFreeCommandBuffers(vulkanLogicalDevice.Device, commandPool.Raw, 1, ref cb);
     }
 
     private void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)

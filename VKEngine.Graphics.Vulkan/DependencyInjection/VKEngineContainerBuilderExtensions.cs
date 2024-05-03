@@ -11,7 +11,6 @@ public static class VKEngineContainerBuilderExtensions
         containerBuilder.Services.AddSingleton<IVulkanPhysicalDevice, VulkanPhysicalDevice>();
         containerBuilder.Services.AddSingleton<IVulkanLogicalDevice, VulkanLogicalDevice>();
         containerBuilder.Services.AddSingleton<IVulkanSwapChain, VulkanSwapChain>();
-        containerBuilder.Services.AddSingleton<IVulkanCommandPool, VulkanCommandPool>();
         containerBuilder.Services.AddSingleton<IVulkanPipeline, VulkanPipeline>();
 
         containerBuilder.Services.AddSingleton<IShaderFactory, VulkanShaderFactory>();
@@ -20,6 +19,10 @@ public static class VKEngineContainerBuilderExtensions
         containerBuilder.Services.AddSingleton<IGraphicsContext, VulkanGraphicsContext>();
 
         containerBuilder.Services.AddSingleton<IVulkanSwapChain, VulkanSwapChain>();
+
+        containerBuilder.Services.AddSingleton<IVulkanRenderPassFactory, VulkanRenderPassFactory>();
+        containerBuilder.Services.AddSingleton<IVulkanCommandPoolFactory, VulkanCommandPoolFactory>();
+        //containerBuilder.Services.AddSingleton<IVulkanCommandBufferAllocator, VulkanCommandBufferAllocator>();
 
         return containerBuilder;
     }

@@ -12,6 +12,7 @@ public interface IVulkanSwapChain : IDisposable
     VkExtent2D Extent { get; }
 
     void Initialize(VkInstance vkInstance);
+    void Present();
 }
 
 internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice) : IVulkanSwapChain
@@ -21,6 +22,8 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
     private VkPresentModeKHR presentMode;
     private VkSurfaceFormatKHR surfaceFormat;
     private VkExtent2D extent = new VkExtent2D(window.Width, window.Height);
+
+    private RawList<VkFence> waitFences;
 
     private RawList<VkImageView> imageViews = [];
 
@@ -39,6 +42,47 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
         CreateSurfaceUnsafe(vkInstance);
         CreateSwapChainUnsafe();
         CreateImageViewsUnsafe();
+    }
+
+    public void Present()
+    {
+        var submitInfo = CreateSubmitInfoUnsafe();
+
+        QueueSubmit(submitInfo);
+
+        unsafe
+        {
+            //VkPresentInfoKHR presentInfo = VkPresentInfoKHR.New();
+            //presentInfo.waitSemaphoreCount = 1;
+            //presentInfo.pWaitSemaphores = &signalSemaphore;
+
+            //VkSwapchainKHR swapchain = vulkanSwapChain.Raw;
+            //presentInfo.swapchainCount = 1;
+            //presentInfo.pSwapchains = &swapchain;
+            //presentInfo.pImageIndices = &imageIndex;
+
+            //vkQueuePresentKHR(vulkanLogicalDevice.PresentQueue, ref presentInfo);
+        }
+    }
+
+    private unsafe void QueueSubmit(VkSubmitInfo submitInfo)
+    {
+        var result = vkQueueSubmit(vulkanLogicalDevice.GraphicsQueue, 1, &submitInfo, VkFence.Null);
+        if (result is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to submit queue!");
+        }
+    }
+
+    private unsafe VkSubmitInfo CreateSubmitInfoUnsafe()
+    {
+        var pipelineStageFlags = VkPipelineStageFlags.ColorAttachmentOutput;
+
+        VkSubmitInfo submitInfo = VkSubmitInfo.New();
+        submitInfo.pWaitDstStageMask = &pipelineStageFlags;
+
+
+        return submitInfo;
     }
 
     public void Dispose()
@@ -193,6 +237,25 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
             }
 
             imageViews.Add(imageView);
+        }
+    }
+
+    private unsafe void CreateWaitFences()
+    {
+        waitFences = new RawList<VkFence>(imageViews.Count);
+
+        for (int i = 0; i < imageViews.Count; i++)
+        {
+            var fenceCreateInfo = VkFenceCreateInfo.New();
+            fenceCreateInfo.flags = VkFenceCreateFlags.Signaled;
+
+            var result = vkCreateFence(vulkanLogicalDevice.Device, ref fenceCreateInfo, null, out var fence);
+            if (result is not VkResult.Success)
+            {
+                throw new ApplicationException("Failed to create fence!");
+            }
+
+            waitFences.Add(fence);
         }
     }
 }
