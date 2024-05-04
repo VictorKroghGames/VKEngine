@@ -69,7 +69,7 @@ internal sealed class VulkanCommandPool(IVulkanPhysicalDevice vulkanPhysicalDevi
 
     public unsafe void FreeCommandBuffers(uint count, IEnumerable<ICommandBuffer> commandBuffers)
     {
-        if(commandBuffers.All(cmdBuffers => cmdBuffers is not IVulkanCommandBuffer vulkanCommandBuffer))
+        if (commandBuffers.All(cmdBuffers => cmdBuffers is not IVulkanCommandBuffer vulkanCommandBuffer))
         {
             throw new ApplicationException("All command buffers must be of type IVulkanCommandBuffer!");
         }

@@ -18,7 +18,7 @@ internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysical
 
     public void Initialize()
     {
-        if(GLFW.VulkanSupported() is false)
+        if (GLFW.VulkanSupported() is false)
         {
             throw new PlatformNotSupportedException("Vulkan is not supported on this platform.");
         }

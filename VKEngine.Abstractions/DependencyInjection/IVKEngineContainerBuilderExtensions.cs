@@ -3,7 +3,7 @@ using VKEngine.Configuration;
 
 namespace VKEngine.DependencyInjection;
 
-public static  class IVKEngineContainerBuilderExtensions
+public static class IVKEngineContainerBuilderExtensions
 {
     public static IVKEngineContainerBuilder AddConfiguration<TConfiguration>(this IVKEngineContainerBuilder containerBuilder, Func<IVKEngineConfiguration, TConfiguration> configurationGetter)
         where TConfiguration : class, IConfiguration

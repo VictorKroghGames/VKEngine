@@ -80,7 +80,7 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
         VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New();
 
         fixed (VkDeviceQueueCreateInfo* qciPtr = &queueCreateInfos.Items[0])
-        deviceCreateInfo.pQueueCreateInfos = qciPtr;
+            deviceCreateInfo.pQueueCreateInfos = qciPtr;
         deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.Count;
 
         deviceCreateInfo.pEnabledFeatures = &vkPhysicalDeviceFeatures;

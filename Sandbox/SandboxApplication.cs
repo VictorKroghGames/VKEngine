@@ -29,7 +29,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
         while (isRunning)
         {
-            if(input.IsKeyPressed(KeyCodes.A))
+            if (input.IsKeyPressed(KeyCodes.A))
             {
                 actionQueue.Enqueue(() => Console.WriteLine("Hello A from RenderThread (from GameLoop)!"));
             }
@@ -54,7 +54,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
     private void RenderThread()
     {
-        while(isRunning)
+        while (isRunning)
         {
             if (actionQueue.IsEmpty)
             {

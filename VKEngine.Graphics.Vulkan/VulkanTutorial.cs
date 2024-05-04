@@ -7,7 +7,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using VKEngine.Graphics.Vulkan.Native;
 using Vulkan;
-using Vulkan.Win32;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;

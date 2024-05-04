@@ -1,6 +1,4 @@
-﻿using VKEngine.Configuration;
-
-namespace VKEngine.Configuration;
+﻿namespace VKEngine.Configuration;
 
 public sealed class VKEngineConfiguration : IVKEngineConfiguration
 {
