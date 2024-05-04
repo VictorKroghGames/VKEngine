@@ -1,6 +1,6 @@
 ﻿namespace VKEngine.Configuration;
 
-public interface IGraphicsConfiguration
+public interface IGraphicsConfiguration : IConfiguration
 {
     bool EnableVSync { get; init; }
 }

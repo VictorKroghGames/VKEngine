@@ -13,6 +13,8 @@ public static class VKEngineContainerBuilderExtensions
     public static IVKEngineContainerBuilder AddGraphicsModule<TRenderer>(this IVKEngineContainerBuilder containerBuilder)
         where TRenderer : class, IRenderer
     {
+        containerBuilder.AddConfiguration(x => x.GraphicsConfiguration);
+
         containerBuilder.AddVulkanGraphics();
 
         containerBuilder.Services.AddSingleton<IShaderLibrary, ShaderLibrary>();

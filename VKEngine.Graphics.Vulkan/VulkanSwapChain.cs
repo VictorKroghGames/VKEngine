@@ -1,4 +1,5 @@
-﻿using VKEngine.Graphics.Vulkan.Native;
+﻿using VKEngine.Configuration;
+using VKEngine.Graphics.Vulkan.Native;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
@@ -22,7 +23,7 @@ internal struct VulkanSwapChainCommandBuffer
     public VkCommandBuffer commandBuffer;
 }
 
-internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice) : IVulkanSwapChain
+internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice) : IVulkanSwapChain
 {
     private VkSwapchainKHR swapchain;
     private VkSurfaceKHR surface;
@@ -184,6 +185,11 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
         }
 
         var presentModeKHR = VkPresentModeKHR.FifoKHR; // If v-sync is enabled, this is the only mode available
+        if (graphicsConfiguration.EnableVSync is true)
+        {
+            return presentModeKHR;
+        }
+
         for (int i = 0; i < presentModeCount; i++)
         {
             if (presentModes[i].Equals(VkPresentModeKHR.MailboxKHR))
@@ -283,7 +289,7 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
 
         CreateSemaphoresUnsafe();
 
-        if(waitFences.Length != imageViews.Count)
+        if (waitFences.Length != imageViews.Count)
         {
             var fenceCreateInfo = VkFenceCreateInfo.New();
             fenceCreateInfo.flags = VkFenceCreateFlags.Signaled;
