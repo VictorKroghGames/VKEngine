@@ -15,11 +15,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Core", "VKEngine.C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Abstractions", "VKEngine.Abstractions\VKEngine.Abstractions.csproj", "{563D389F-63B7-47FF-8B5A-71939B86B951}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Graphics", "VKEngine.Graphics\VKEngine.Graphics.csproj", "{FE03EEEC-A7D5-457D-8DE6-67FDC6C5635A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Graphics", "VKEngine.Graphics\VKEngine.Graphics.csproj", "{FE03EEEC-A7D5-457D-8DE6-67FDC6C5635A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Graphics.Vulkan", "VKEngine.Graphics.Vulkan\VKEngine.Graphics.Vulkan.csproj", "{33ACE3D6-86A7-4E19-A7D4-BEB304ABD8F8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Graphics.Vulkan", "VKEngine.Graphics.Vulkan\VKEngine.Graphics.Vulkan.csproj", "{33ACE3D6-86A7-4E19-A7D4-BEB304ABD8F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VKEngine.Graphics.Abstractions", "VKEngine.Graphics.Abstractions\VKEngine.Graphics.Abstractions.csproj", "{C7064DD0-461D-4F66-889E-F8F548E60931}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VKEngine.Graphics.Abstractions", "VKEngine.Graphics.Abstractions\VKEngine.Graphics.Abstractions.csproj", "{C7064DD0-461D-4F66-889E-F8F548E60931}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

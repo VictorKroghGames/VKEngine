@@ -1,8 +1,8 @@
 ﻿using VKEngine.Configuration;
 
-namespace VKEngine.DependencyInjection;
+namespace VKEngine.Configuration;
 
-public class PlatformConfiguration : IPlatformConfiguration
+public sealed class PlatformConfiguration : IPlatformConfiguration
 {
     public required string WindowTitle { get; init; }
     public required int WindowWidth { get; init; }

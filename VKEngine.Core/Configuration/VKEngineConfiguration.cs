@@ -1,8 +1,9 @@
 ﻿using VKEngine.Configuration;
 
-namespace VKEngine.Core.Configuration;
+namespace VKEngine.Configuration;
 
-public class VKEngineConfiguration : IVKEngineConfiguration
+public sealed class VKEngineConfiguration : IVKEngineConfiguration
 {
     public required IPlatformConfiguration PlatformConfiguration { get; set; }
+    public required IGraphicsConfiguration GraphicsConfiguration { get; set; }
 }

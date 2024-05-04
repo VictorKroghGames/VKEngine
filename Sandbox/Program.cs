@@ -1,5 +1,5 @@
-﻿using VKEngine.Core;
-using VKEngine.Core.Configuration;
+﻿using VKEngine.Configuration;
+using VKEngine.Core;
 using VKEngine.DependencyInjection;
 
 var builder = Engine.CreateBuilder<SandboxApplication>(args);
@@ -11,6 +11,9 @@ builder.AddConfiguration<VKEngineConfiguration>(config =>
         WindowTitle = "VKEngine Sandbox",
         WindowWidth = 1024,
         WindowHeight = 768
+    };
+    config.GraphicsConfiguration = new GraphicsConfiguration
+    {
     };
 });
 builder.AddPlatformModule();
