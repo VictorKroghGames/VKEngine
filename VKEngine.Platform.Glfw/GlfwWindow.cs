@@ -3,14 +3,14 @@ using VKEngine.Platform.Glfw.Native;
 
 namespace VKEngine.Platform.Glfw;
 
-internal sealed class GlfwWindow(IVKEngineConfiguration engineConfiguration) : IWindow
+internal sealed class GlfwWindow(IVKEngineConfiguration engineConfiguration, IPlatformConfiguration platformConfiguration) : IWindow
 {
     internal IntPtr windowHandle;
 
     public bool IsRunning => GLFW.WindowShouldClose(windowHandle) is false;
 
-    public int Width => 800;
-    public int Height => 600;
+    public int Width => platformConfiguration.WindowWidth;
+    public int Height => platformConfiguration.WindowHeight;
 
     public nint NativeWindowHandle => windowHandle;
 

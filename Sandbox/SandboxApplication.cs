@@ -3,7 +3,7 @@ using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer renderer, ISwapChain swapChain, ITestRenderer testRenderer) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -24,7 +24,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer
 
         window.Initialize();
 
-        renderer.Initialize();
+        //renderer.Initialize();
         testRenderer.Initialize();
 
         while (isRunning)
@@ -39,13 +39,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer
                 actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
             }
 
-            renderer.BeginFrame();
-            testRenderer.RecordCommandBuffer(swapChain.CurrentImageIndex);
-            renderer.EndFrame();
-
-            swapChain.AquireNextImage();
             testRenderer.RenderTriangle();
-            swapChain.Present();
 
             window.Update();
             isRunning = window.IsRunning;
@@ -53,7 +47,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IRenderer
 
         testRenderer.Cleanup();
 
-        renderer.Dispose();
+        //renderer.Dispose();
 
         thread.Join();
     }
