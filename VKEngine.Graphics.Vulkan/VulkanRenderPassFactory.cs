@@ -2,12 +2,12 @@
 
 public interface IVulkanRenderPassFactory
 {
-    IVulkanRenderPass CreateRenderPass();
+    IVulkanRenderPass CreateRenderPass(IVulkanSwapChain vulkanSwapChain);
 }
 
-internal sealed class VulkanRenderPassFactory(IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain) : IVulkanRenderPassFactory
+internal sealed class VulkanRenderPassFactory(IVulkanLogicalDevice vulkanLogicalDevice) : IVulkanRenderPassFactory
 {
-    public IVulkanRenderPass CreateRenderPass()
+    public IVulkanRenderPass CreateRenderPass(IVulkanSwapChain vulkanSwapChain)
     {
         var vulkanRenderPass = new VulkanRenderPass(vulkanLogicalDevice, vulkanSwapChain);
         vulkanRenderPass.Initialize();

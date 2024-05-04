@@ -3,12 +3,9 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-public interface IVulkanCommandBuffer
+public interface IVulkanCommandBuffer : ICommandBuffer
 {
     VkCommandBuffer Raw { get; }
-
-    void Begin();
-    void End();
 }
 
 internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer) : IVulkanCommandBuffer

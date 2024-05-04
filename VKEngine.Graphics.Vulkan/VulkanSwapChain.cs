@@ -4,7 +4,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-public interface IVulkanSwapChain : IDisposable
+public interface IVulkanSwapChain : ISwapChain, IDisposable
 {
     VkSwapchainKHR Raw { get; }
     VkSurfaceFormatKHR SurfaceFormat { get; }
@@ -12,7 +12,14 @@ public interface IVulkanSwapChain : IDisposable
     VkExtent2D Extent { get; }
 
     void Initialize(VkInstance vkInstance);
-    void Present();
+
+    void Resize(int width, int height);
+}
+
+internal struct VulkanSwapChainCommandBuffer
+{
+    public VkCommandPool commandPool;
+    public VkCommandBuffer commandBuffer;
 }
 
 internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice) : IVulkanSwapChain
@@ -22,8 +29,15 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
     private VkPresentModeKHR presentMode;
     private VkSurfaceFormatKHR surfaceFormat;
     private VkExtent2D extent = new VkExtent2D(window.Width, window.Height);
+    private VkSemaphore presentCompleteSemaphore;
+    private VkSemaphore renderCompleteSemaphore;
 
-    private RawList<VkFence> waitFences;
+    private VulkanSwapChainCommandBuffer[] commandBuffers = [];
+    private VkFence[] waitFences = [];
+
+    private uint currentImageIndex = 0;
+    private uint currentBufferIndex = 0;
+    private uint framesInFlight = 2;
 
     private RawList<VkImageView> imageViews = [];
 
@@ -31,6 +45,10 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
     public VkSurfaceFormatKHR SurfaceFormat => surfaceFormat;
     public RawList<VkImageView> ImageViews => imageViews;
     public VkExtent2D Extent => extent;
+
+    public uint CurrentImageIndex => currentImageIndex;
+
+    public ICommandBuffer CurrentCommandBuffer => new VulkanCommandBuffer(commandBuffers[currentBufferIndex].commandBuffer);
 
     public void Initialize(VkInstance vkInstance)
     {
@@ -41,59 +59,97 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
 
         CreateSurfaceUnsafe(vkInstance);
         CreateSwapChainUnsafe();
-        CreateImageViewsUnsafe();
     }
 
-    public void Present()
+    public unsafe void AquireNextImage()
     {
-        var submitInfo = CreateSubmitInfoUnsafe();
-
-        QueueSubmit(submitInfo);
-
-        unsafe
+        uint imageIndex = 0;
+        VkResult result = vkAcquireNextImageKHR(vulkanLogicalDevice.Device, swapchain, ulong.MaxValue, presentCompleteSemaphore, VkFence.Null, ref imageIndex);
+        if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR)
         {
-            //VkPresentInfoKHR presentInfo = VkPresentInfoKHR.New();
-            //presentInfo.waitSemaphoreCount = 1;
-            //presentInfo.pWaitSemaphores = &signalSemaphore;
-
-            //VkSwapchainKHR swapchain = vulkanSwapChain.Raw;
-            //presentInfo.swapchainCount = 1;
-            //presentInfo.pSwapchains = &swapchain;
-            //presentInfo.pImageIndices = &imageIndex;
-
-            //vkQueuePresentKHR(vulkanLogicalDevice.PresentQueue, ref presentInfo);
+            Resize(0, 0);
         }
-    }
-
-    private unsafe void QueueSubmit(VkSubmitInfo submitInfo)
-    {
-        var result = vkQueueSubmit(vulkanLogicalDevice.GraphicsQueue, 1, &submitInfo, VkFence.Null);
-        if (result is not VkResult.Success)
+        else if (result != VkResult.Success)
         {
-            throw new ApplicationException("Failed to submit queue!");
+            throw new InvalidOperationException("Acquiring next image failed: " + result);
         }
+
+        currentImageIndex = imageIndex;
+
+        vkResetCommandPool(vulkanLogicalDevice.Device, commandBuffers[currentBufferIndex].commandPool, VkCommandPoolResetFlags.None);
     }
 
-    private unsafe VkSubmitInfo CreateSubmitInfoUnsafe()
+    public unsafe void Present()
     {
-        var pipelineStageFlags = VkPipelineStageFlags.ColorAttachmentOutput;
+        var swapchainPresent = swapchain;
+        var imageIndex = currentImageIndex;
 
-        VkSubmitInfo submitInfo = VkSubmitInfo.New();
-        submitInfo.pWaitDstStageMask = &pipelineStageFlags;
+        var waitSemaphore = presentCompleteSemaphore;
+        var signalSemaphore = renderCompleteSemaphore;
+        var commandBuffer = commandBuffers[currentBufferIndex].commandBuffer;
+        var waitStages = VkPipelineStageFlags.ColorAttachmentOutput;
 
+        var submitInfo = VkSubmitInfo.New();
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = &waitSemaphore;
+        submitInfo.pWaitDstStageMask = &waitStages;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &signalSemaphore;
 
-        return submitInfo;
+        vkResetFences(vulkanLogicalDevice.Device, 1, ref waitFences[currentBufferIndex]);
+        vkQueueSubmit(vulkanLogicalDevice.GraphicsQueue, 1, &submitInfo, waitFences[currentBufferIndex]);
+
+        VkPresentInfoKHR presentInfo = VkPresentInfoKHR.New();
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &signalSemaphore;
+
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = &swapchainPresent;
+        presentInfo.pImageIndices = &imageIndex;
+
+        vkQueuePresentKHR(vulkanLogicalDevice.PresentQueue, ref presentInfo);
+
+        currentBufferIndex = (currentBufferIndex + 1) % framesInFlight; // 2 = frames in flight
+        vkWaitForFences(vulkanLogicalDevice.Device, 1, ref waitFences[currentBufferIndex], true, ulong.MaxValue);
+    }
+
+    public void Resize(int width, int height)
+    {
+        vulkanLogicalDevice.WaitIdle();
+
+        CreateSwapChainUnsafe();
+
+        vulkanLogicalDevice.WaitIdle();
     }
 
     public void Dispose()
     {
+        vulkanLogicalDevice.WaitIdle();
+
+        //vkDestroySurfaceKHR(((IVulkanGraphicsContext)graphicsContext).Instance, surface, IntPtr.Zero);
+        vkDestroySwapchainKHR(vulkanLogicalDevice.Device, swapchain, IntPtr.Zero);
+
         for (int i = 0; i < imageViews.Count; i++)
         {
             vkDestroyImageView(vulkanLogicalDevice.Device, imageViews[i], IntPtr.Zero);
         }
 
-        //vkDestroySurfaceKHR(((IVulkanGraphicsContext)graphicsContext).Instance, surface, IntPtr.Zero);
-        vkDestroySwapchainKHR(vulkanLogicalDevice.Device, swapchain, IntPtr.Zero);
+        foreach (var commandBuffer in commandBuffers)
+        {
+            vkDestroyCommandPool(vulkanLogicalDevice.Device, commandBuffer.commandPool, IntPtr.Zero);
+        }
+
+        vkDestroySemaphore(vulkanLogicalDevice.Device, presentCompleteSemaphore, IntPtr.Zero);
+        vkDestroySemaphore(vulkanLogicalDevice.Device, renderCompleteSemaphore, IntPtr.Zero);
+
+        for (int i = 0; i < waitFences.Length; i++)
+        {
+            vkDestroyFence(vulkanLogicalDevice.Device, waitFences[i], IntPtr.Zero);
+        }
+
+        vulkanLogicalDevice.WaitIdle();
     }
 
     private unsafe void CreateSurfaceUnsafe(VkInstance vkInstance)
@@ -173,33 +229,106 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
 
     private unsafe void CreateSwapChainUnsafe()
     {
-        var surfaceCapabilities = new VkSurfaceCapabilitiesKHR();
-        var result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanPhysicalDevice.PhysicalDevice, surface, out surfaceCapabilities);
+        var result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanPhysicalDevice.PhysicalDevice, surface, out var surfaceCapabilities);
         if (result is not VkResult.Success)
         {
             throw new ApplicationException("Failed to get physical device surface capabilities!");
         }
 
+        var swapChainExtent = surfaceCapabilities.currentExtent;
+
+        var oldSwapChain = swapchain;
+
         var swapChainCreateInfo = VkSwapchainCreateInfoKHR.New();
+        swapChainCreateInfo.pNext = null;
         swapChainCreateInfo.surface = surface;
         swapChainCreateInfo.oldSwapchain = VkSwapchainKHR.Null;
         swapChainCreateInfo.imageFormat = surfaceFormat.format;
         swapChainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
         swapChainCreateInfo.minImageCount = surfaceCapabilities.minImageCount + 1; // frames in flight
         swapChainCreateInfo.imageSharingMode = VkSharingMode.Exclusive;
-        swapChainCreateInfo.imageExtent = extent;
+        swapChainCreateInfo.imageExtent = swapChainExtent; // extent;
         swapChainCreateInfo.imageArrayLayers = 1;
         swapChainCreateInfo.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
         swapChainCreateInfo.clipped = true;
         swapChainCreateInfo.imageUsage = VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransferDst;
         swapChainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
         swapChainCreateInfo.presentMode = presentMode;
+        swapChainCreateInfo.oldSwapchain = oldSwapChain;
 
         result = vkCreateSwapchainKHR(vulkanLogicalDevice.Device, ref swapChainCreateInfo, null, out swapchain);
         if (result is not VkResult.Success)
         {
             throw new ApplicationException("Failed to create swapchain!");
         }
+
+        if (oldSwapChain != VkSwapchainKHR.Null)
+        {
+            vkDestroySwapchainKHR(vulkanLogicalDevice.Device, oldSwapChain, IntPtr.Zero);
+        }
+
+        for (int i = 0; i < imageViews.Count; i++)
+        {
+            vkDestroyImageView(vulkanLogicalDevice.Device, imageViews[i], IntPtr.Zero);
+        }
+
+        CreateImageViewsUnsafe();
+
+        foreach (var commandBuffer in commandBuffers)
+        {
+            vkDestroyCommandPool(vulkanLogicalDevice.Device, commandBuffer.commandPool, null);
+        }
+
+        CreateCommandBuffersUnsafe(vulkanLogicalDevice);
+
+        CreateSemaphoresUnsafe();
+
+        if(waitFences.Length != imageViews.Count)
+        {
+            var fenceCreateInfo = VkFenceCreateInfo.New();
+            fenceCreateInfo.flags = VkFenceCreateFlags.Signaled;
+
+            waitFences = new VkFence[imageViews.Count];
+            for (int i = 0; i < waitFences.Length; i++)
+            {
+                vkCreateFence(vulkanLogicalDevice.Device, ref fenceCreateInfo, IntPtr.Zero, out waitFences[i]);
+            }
+        }
+    }
+
+    private unsafe void CreateCommandBuffersUnsafe(IVulkanLogicalDevice vulkanLogicalDevice)
+    {
+        var commandPoolCreateInfo = VkCommandPoolCreateInfo.New();
+        commandPoolCreateInfo.queueFamilyIndex = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
+        commandPoolCreateInfo.flags = VkCommandPoolCreateFlags.Transient;
+
+        var commandBufferAllocateInfo = VkCommandBufferAllocateInfo.New();
+        commandBufferAllocateInfo.commandPool = VkCommandPool.Null;
+        commandBufferAllocateInfo.level = VkCommandBufferLevel.Primary;
+        commandBufferAllocateInfo.commandBufferCount = 1;
+
+        commandBuffers = new VulkanSwapChainCommandBuffer[imageViews.Count];
+        for (int i = 0; i < commandBuffers.Length; i++)
+        {
+            vkCreateCommandPool(vulkanLogicalDevice.Device, &commandPoolCreateInfo, IntPtr.Zero, out commandBuffers[i].commandPool);
+
+            commandBufferAllocateInfo.commandPool = commandBuffers[i].commandPool;
+            vkAllocateCommandBuffers(vulkanLogicalDevice.Device, &commandBufferAllocateInfo, out commandBuffers[i].commandBuffer);
+        }
+        //foreach (var commandBuffer in commandBuffers)
+        //{
+        //    vkCreateCommandPool(vulkanLogicalDevice.Device, &commandPoolCreateInfo, IntPtr.Zero, &commandBuffer.commandPool);
+
+        //    commandBufferAllocateInfo.commandPool = commandBuffer.commandPool;
+        //    vkAllocateCommandBuffers(vulkanLogicalDevice.Device, &commandBufferAllocateInfo, &commandBuffer.commandBuffer);
+        //}
+    }
+
+    private unsafe void CreateSemaphoresUnsafe()
+    {
+        VkSemaphoreCreateInfo semaphoreCI = VkSemaphoreCreateInfo.New();
+        vkCreateSemaphore(vulkanLogicalDevice.Device, ref semaphoreCI, null, out presentCompleteSemaphore);
+        vkCreateSemaphore(vulkanLogicalDevice.Device, ref semaphoreCI, null, out renderCompleteSemaphore);
     }
 
     private unsafe void CreateImageViewsUnsafe()
@@ -244,25 +373,6 @@ internal class VulkanSwapChain(IWindow window, IVulkanPhysicalDevice vulkanPhysi
             }
 
             imageViews.Add(imageView);
-        }
-    }
-
-    private unsafe void CreateWaitFences()
-    {
-        waitFences = new RawList<VkFence>(imageViews.Count);
-
-        for (int i = 0; i < imageViews.Count; i++)
-        {
-            var fenceCreateInfo = VkFenceCreateInfo.New();
-            fenceCreateInfo.flags = VkFenceCreateFlags.Signaled;
-
-            var result = vkCreateFence(vulkanLogicalDevice.Device, ref fenceCreateInfo, null, out var fence);
-            if (result is not VkResult.Success)
-            {
-                throw new ApplicationException("Failed to create fence!");
-            }
-
-            waitFences.Add(fence);
         }
     }
 }

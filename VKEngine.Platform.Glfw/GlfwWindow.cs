@@ -1,8 +1,9 @@
-﻿using VKEngine.Platform.Glfw.Native;
+﻿using VKEngine.Configuration;
+using VKEngine.Platform.Glfw.Native;
 
 namespace VKEngine.Platform.Glfw;
 
-internal sealed class GlfwWindow : IWindow
+internal sealed class GlfwWindow(IVKEngineConfiguration engineConfiguration) : IWindow
 {
     internal IntPtr windowHandle;
 
@@ -21,10 +22,15 @@ internal sealed class GlfwWindow : IWindow
             return;
         }
 
-        GLFW.WindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_NO_API);
-        GLFW.WindowHint(GLFW.GLFW_RESIZABLE, GLFW.GLFW_FALSE);
+        CreateWindow(engineConfiguration.PlatformConfiguration);
+    }
 
-        windowHandle = GLFW.CreateWindow(800, 600, "Hello, World!", IntPtr.Zero, IntPtr.Zero);
+    private void CreateWindow(IPlatformConfiguration platformConfiguration)
+    {
+        GLFW.WindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_NO_API);
+        GLFW.WindowHint(GLFW.GLFW_RESIZABLE, platformConfiguration.IsResizable ? GLFW.GLFW_TRUE : GLFW.GLFW_FALSE);
+
+        windowHandle = GLFW.CreateWindow(platformConfiguration.WindowWidth, platformConfiguration.WindowHeight, platformConfiguration.WindowTitle, IntPtr.Zero, IntPtr.Zero);
         if (windowHandle == IntPtr.Zero)
         {
             Console.WriteLine("Failed to create window.");

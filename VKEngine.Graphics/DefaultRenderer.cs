@@ -1,6 +1,6 @@
 ﻿namespace VKEngine.Graphics;
 
-internal class DefaultRenderer(IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary) : IRenderer
+internal class DefaultRenderer(IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain) : IRenderer
 {
     public void Initialize()
     {
@@ -15,5 +15,15 @@ internal class DefaultRenderer(IGraphicsContext graphicsContext, IShaderLibrary 
     public void Dispose()
     {
         graphicsContext.Dispose();
+    }
+
+    public void BeginFrame()
+    {
+        swapChain.CurrentCommandBuffer.Begin();
+    }
+
+    public void EndFrame()
+    {
+        swapChain.CurrentCommandBuffer.End();
     }
 }
