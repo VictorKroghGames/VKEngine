@@ -10,7 +10,7 @@ internal interface IVulkanGraphicsContext : IGraphicsContext
     internal VkInstance Instance { get; }
 }
 
-internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice, IVulkanSwapChain vulkanSwapChain) : IVulkanGraphicsContext
+internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysicalDevice, IVulkanLogicalDevice vulkanLogicalDevice) : IVulkanGraphicsContext
 {
     private VkInstance instance;
 
@@ -30,15 +30,13 @@ internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysical
         }
 
         vulkanPhysicalDevice.Initialize(instance);
-        vulkanLogicalDevice.Initialize();
-        vulkanSwapChain.Initialize(instance);
+        vulkanLogicalDevice.Initialize(vulkanPhysicalDevice);
     }
 
-    public void Dispose()
+    public void Cleanup()
     {
-        vulkanSwapChain.Dispose();
-        vulkanLogicalDevice.Dispose();
-        vulkanPhysicalDevice.Dispose();
+        vulkanLogicalDevice.Cleanup();
+        vulkanPhysicalDevice.Cleanup();
 
         vkDestroyInstance(instance, IntPtr.Zero);
     }

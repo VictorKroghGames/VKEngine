@@ -9,7 +9,7 @@ public struct QueueFamilyIndex
     public uint Present { get; set; }
 }
 
-public interface IVulkanPhysicalDevice : IDisposable
+public interface IVulkanPhysicalDevice
 {
     bool IsInitialized { get; }
 
@@ -17,6 +17,7 @@ public interface IVulkanPhysicalDevice : IDisposable
     QueueFamilyIndex QueueFamilyIndices { get; }
 
     void Initialize(VkInstance vkInstance);
+    void Cleanup();
 }
 
 internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
@@ -50,7 +51,7 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
         isInitialized = physicalDevice != VkPhysicalDevice.Null;
     }
 
-    public void Dispose()
+    public void Cleanup()
     {
     }
 

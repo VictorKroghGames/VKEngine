@@ -4,7 +4,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-public interface IVulkanLogicalDevice : IDisposable
+public interface IVulkanLogicalDevice
 {
     bool IsInitialized { get; }
 
@@ -12,11 +12,12 @@ public interface IVulkanLogicalDevice : IDisposable
     VkQueue GraphicsQueue { get; }
     VkQueue PresentQueue { get; }
 
-    void Initialize();
+    void Initialize(IVulkanPhysicalDevice physicalDevice);
+    void Cleanup();
     void WaitIdle();
 }
 
-internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDevice) : IVulkanLogicalDevice
+internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
 {
     private VkDevice device;
     private VkQueue graphicsQueue;
@@ -29,21 +30,26 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
     public VkQueue GraphicsQueue => graphicsQueue;
     public VkQueue PresentQueue => presentQueue;
 
-    public void Initialize()
+    public void Initialize(IVulkanPhysicalDevice physicalDevice)
     {
-        if (vulkanPhysicalDevice.IsInitialized is false)
+        if (physicalDevice.IsInitialized is false)
         {
             throw new ApplicationException("Physical device must be initialized before initializing logical device!");
         }
 
         var deviceFeatures = new VkPhysicalDeviceFeatures();
         deviceFeatures.samplerAnisotropy = false;
-        CreateLogicalDeviceUnsafe(vulkanPhysicalDevice, deviceFeatures);
+        CreateLogicalDeviceUnsafe(physicalDevice, deviceFeatures);
 
-        vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Graphics, 0, out graphicsQueue);
-        vkGetDeviceQueue(device, vulkanPhysicalDevice.QueueFamilyIndices.Present, 0, out presentQueue);
+        vkGetDeviceQueue(device, physicalDevice.QueueFamilyIndices.Graphics, 0, out graphicsQueue);
+        vkGetDeviceQueue(device, physicalDevice.QueueFamilyIndices.Present, 0, out presentQueue);
 
         isInitialized = true;
+    }
+
+    public void Cleanup()
+    {
+        vkDestroyDevice(device, IntPtr.Zero);
     }
 
     public void WaitIdle()
@@ -51,17 +57,12 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
         vkDeviceWaitIdle(device);
     }
 
-    public void Dispose()
-    {
-        vkDestroyDevice(device, IntPtr.Zero);
-    }
-
-    private unsafe VkResult CreateLogicalDeviceUnsafe(IVulkanPhysicalDevice vulkanPhysicalDevice, VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures)
+    private unsafe VkResult CreateLogicalDeviceUnsafe(IVulkanPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures physicalDeviceFeatures)
     {
         var familyIndices = new HashSet<uint>()
         {
-            vulkanPhysicalDevice.QueueFamilyIndices.Graphics,
-            vulkanPhysicalDevice.QueueFamilyIndices.Present
+            physicalDevice.QueueFamilyIndices.Graphics,
+            physicalDevice.QueueFamilyIndices.Present
         };
 
         var queueCreateInfos = new RawList<VkDeviceQueueCreateInfo>();
@@ -70,7 +71,7 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
         foreach (uint index in familyIndices)
         {
             VkDeviceQueueCreateInfo queueCreateInfo = VkDeviceQueueCreateInfo.New();
-            queueCreateInfo.queueFamilyIndex = vulkanPhysicalDevice.QueueFamilyIndices.Graphics;
+            queueCreateInfo.queueFamilyIndex = physicalDevice.QueueFamilyIndices.Graphics;
             queueCreateInfo.queueCount = 1;
             float priority = 1f;
             queueCreateInfo.pQueuePriorities = &priority;
@@ -83,7 +84,7 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
             deviceCreateInfo.pQueueCreateInfos = qciPtr;
         deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.Count;
 
-        deviceCreateInfo.pEnabledFeatures = &vkPhysicalDeviceFeatures;
+        deviceCreateInfo.pEnabledFeatures = &physicalDeviceFeatures;
 
         byte* layerNames = Strings.StandardValidationLayerName;
         deviceCreateInfo.enabledLayerCount = 1;
@@ -93,8 +94,6 @@ internal sealed class VulkanLogicalDevice(IVulkanPhysicalDevice vulkanPhysicalDe
         deviceCreateInfo.enabledExtensionCount = 1;
         deviceCreateInfo.ppEnabledExtensionNames = &extensionNames;
 
-        var physicalDevice = ((VulkanPhysicalDevice)vulkanPhysicalDevice).physicalDevice;
-
-        return vkCreateDevice(physicalDevice, ref deviceCreateInfo, null, out device);
+        return vkCreateDevice(physicalDevice.PhysicalDevice, ref deviceCreateInfo, null, out device);
     }
 }

@@ -14,7 +14,7 @@ internal class DefaultRenderer(IGraphicsContext graphicsContext, IShaderLibrary 
 
     public void Dispose()
     {
-        graphicsContext.Dispose();
+        graphicsContext.Cleanup();
     }
 
     public void BeginFrame()
