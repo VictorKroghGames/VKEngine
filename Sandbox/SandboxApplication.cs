@@ -64,6 +64,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
                 actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
             }
 
+            swapChain.AquireNextImage();
+
             commandBuffer.Begin();
 
             commandBuffer.BeginRenderPass(renderPass);
@@ -75,6 +77,10 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
             commandBuffer.EndRenderPass();
 
             commandBuffer.End();
+
+            commandBuffer.Submit();
+
+            swapChain.Present();
 
             //testRenderer.RenderTriangle();
 

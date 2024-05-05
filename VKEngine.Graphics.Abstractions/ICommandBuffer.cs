@@ -6,6 +6,7 @@ public interface ICommandBuffer
 
     void Begin();
     void End();
+    void Submit();
 
     void BeginRenderPass(IRenderPass renderPass);
     void EndRenderPass();

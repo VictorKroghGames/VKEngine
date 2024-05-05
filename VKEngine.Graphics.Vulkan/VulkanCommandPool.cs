@@ -46,7 +46,7 @@ internal sealed class VulkanCommandPool(IVulkanPhysicalDevice physicalDevice, IV
             throw new InvalidOperationException("Failed to allocate command buffer!");
         }
 
-        return new VulkanCommandBuffer(commandBufferHandle, swapChain);
+        return new VulkanCommandBuffer(commandBufferHandle, logicalDevice, swapChain);
     }
 
     public unsafe void FreeCommandBuffer(ICommandBuffer commandBuffer)

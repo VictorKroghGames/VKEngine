@@ -3,25 +3,30 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanRenderPassFactory(IVulkanLogicalDevice logicalDevice) : IRenderPassFactory
+internal sealed class VulkanRenderPassFactory(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IRenderPassFactory
 {
     public IRenderPass CreateRenderPass()
     {
-        var renderPass = new VulkanRenderPass(logicalDevice);
+        var renderPass = new VulkanRenderPass(logicalDevice, swapChain);
         renderPass.Initialize();
         return renderPass;
     }
 }
 
-internal sealed class VulkanRenderPass(IVulkanLogicalDevice logicalDevice) : IRenderPass
+internal sealed class VulkanRenderPass(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IRenderPass
 {
     internal VkRenderPass renderPass;
 
     internal unsafe void Initialize()
     {
+        if(swapChain is not VulkanSwapChain vulkanSwapChain)
+        {
+            throw new InvalidOperationException("Invalid swap chain type!");
+        }
+
         var attachmentDescription = new VkAttachmentDescription
         {
-            format = VkFormat.B8g8r8a8Unorm,
+            format = VkFormat.B8g8r8a8Unorm, // vulkanSwapChain.surfaceFormat.format,
             samples = VkSampleCountFlags.Count1,
             loadOp = VkAttachmentLoadOp.Clear,
             storeOp = VkAttachmentStoreOp.Store,
@@ -44,11 +49,23 @@ internal sealed class VulkanRenderPass(IVulkanLogicalDevice logicalDevice) : IRe
             pColorAttachments = &colorAttachmentReference
         };
 
+        var subpassDependency = new VkSubpassDependency
+        {
+            srcSubpass = SubpassExternal,
+            dstSubpass = 0,
+            srcStageMask = VkPipelineStageFlags.ColorAttachmentOutput,
+            srcAccessMask = 0,
+            dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput,
+            dstAccessMask = VkAccessFlags.ColorAttachmentWrite // | VkAccessFlags.ColorAttachmentRead
+        };
+
         var renderPassCreateInfo = VkRenderPassCreateInfo.New();
         renderPassCreateInfo.attachmentCount = 1;
         renderPassCreateInfo.pAttachments = &attachmentDescription;
         renderPassCreateInfo.subpassCount = 1;
         renderPassCreateInfo.pSubpasses = &subpassDescription;
+        renderPassCreateInfo.dependencyCount = 1;
+        renderPassCreateInfo.pDependencies = &subpassDependency;
 
         vkCreateRenderPass(logicalDevice.Device, &renderPassCreateInfo, null, out renderPass);
     }

@@ -3,7 +3,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, ISwapChain swapChain) : ICommandBuffer
+internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : ICommandBuffer
 {
     internal VkCommandBuffer CommandBuffer => commandBuffer;
 
@@ -13,8 +13,9 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, ISwapCh
 
     public unsafe void Begin()
     {
+        vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags.None);
+
         var commandBufferBeginInfo = VkCommandBufferBeginInfo.New();
-        commandBufferBeginInfo.flags = VkCommandBufferUsageFlags.None;
 
         if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) is not VkResult.Success)
         {
@@ -27,6 +28,41 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, ISwapCh
         if (vkEndCommandBuffer(commandBuffer) is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to end command buffer!");
+        }
+    }
+
+    public unsafe void Submit()
+    {
+        if (swapChain is not VulkanSwapChain vulkanSwapChain)
+        {
+            throw new InvalidOperationException("Invalid swap chain type!");
+        }
+
+        var pipelineStageFlags = VkPipelineStageFlags.ColorAttachmentOutput;
+
+        var submitInfo = VkSubmitInfo.New();
+        submitInfo.pWaitDstStageMask = &pipelineStageFlags;
+        submitInfo.waitSemaphoreCount = 1;
+        fixed(VkSemaphore* waitSemaphorePtr = &vulkanSwapChain.imageAvailableSemaphore)
+        {
+            submitInfo.pWaitSemaphores = waitSemaphorePtr;
+        }
+
+        submitInfo.commandBufferCount = 1;
+        fixed (VkCommandBuffer* commandBufferPtr = &commandBuffer)
+        {
+            submitInfo.pCommandBuffers = commandBufferPtr;
+        }
+
+        submitInfo.signalSemaphoreCount = 1;
+        fixed (VkSemaphore* signalSemaphorePtr = &vulkanSwapChain.renderFinishedSemaphore)
+        {
+            submitInfo.pSignalSemaphores = signalSemaphorePtr;
+        }
+
+        if (vkQueueSubmit(logicalDevice.GraphicsQueue, 1, &submitInfo, vulkanSwapChain.inFlightFence) is not VkResult.Success)
+        {
+            throw new InvalidOperationException("Failed to submit command buffer!");
         }
     }
 
@@ -44,24 +80,24 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, ISwapCh
 
         var renderPassBeginInfo = VkRenderPassBeginInfo.New();
         renderPassBeginInfo.renderPass = vulkanRenderPass.renderPass;
-        renderPassBeginInfo.framebuffer = vulkanSwapChain.framebuffers[0];
+        renderPassBeginInfo.framebuffer = vulkanSwapChain.framebuffers[vulkanSwapChain.imageIndex];
         renderPassBeginInfo.renderArea.offset = VkOffset2D.Zero;
         renderPassBeginInfo.renderArea.extent = vulkanSwapChain.extent;
 
         var clearValues = stackalloc VkClearValue[1];
-        clearValues[0].color.float32_0 = 0.0f;
-        clearValues[0].color.float32_1 = 0.0f;
-        clearValues[0].color.float32_2 = 0.0f;
+        clearValues[0].color.float32_0 = 0.2f;
+        clearValues[0].color.float32_1 = 0.4f;
+        clearValues[0].color.float32_2 = 0.8f;
         clearValues[0].color.float32_3 = 1.0f;
         renderPassBeginInfo.pClearValues = clearValues;
         renderPassBeginInfo.clearValueCount = 1;
 
-        vkCmdBeginRenderPass(CommandBuffer, &renderPassBeginInfo, VkSubpassContents.Inline);
+        vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VkSubpassContents.Inline);
     }
 
     public void EndRenderPass()
     {
-        vkCmdEndRenderPass(CommandBuffer);
+        vkCmdEndRenderPass(commandBuffer);
     }
 
     public void BindPipeline(IPipeline pipeline)
@@ -71,7 +107,7 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, ISwapCh
             throw new InvalidOperationException("Invalid pipeline type!");
         }
 
-        vkCmdBindPipeline(CommandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipeline);
+        vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipeline);
     }
 
     public unsafe void Draw()

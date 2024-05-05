@@ -1,4 +1,5 @@
-﻿using VKEngine.Configuration;
+﻿using SixLabors.ImageSharp.Metadata;
+using VKEngine.Configuration;
 using VKEngine.Graphics.Vulkan.Native;
 using Vulkan;
 using static Vulkan.VulkanNative;
@@ -18,7 +19,12 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
     internal VkPresentModeKHR presentMode;
     internal VkExtent2D extent;
 
+    internal VkSemaphore imageAvailableSemaphore = VkSemaphore.Null;
+    internal VkSemaphore renderFinishedSemaphore = VkSemaphore.Null;
+    internal VkFence inFlightFence = VkFence.Null;
+
     private uint imageCount = 0;
+    internal uint imageIndex = 0;
 
     private VkSurfaceFormatKHR[] supportedSurfaceFormats = [];
     private VkPresentModeKHR[] supportedPresentModes = [];
@@ -30,7 +36,7 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
             throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanGraphicsContext!");
         }
 
-        if(renderPass is not VulkanRenderPass vulkanRenderPass)
+        if (renderPass is not VulkanRenderPass vulkanRenderPass)
         {
             throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanRenderPass!");
         }
@@ -41,6 +47,17 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
 
     public void Cleanup()
     {
+        vkDeviceWaitIdle(logicalDevice.Device);
+
+        vkDestroySemaphore(logicalDevice.Device, imageAvailableSemaphore, nint.Zero);
+        imageAvailableSemaphore = VkSemaphore.Null;
+
+        vkDestroySemaphore(logicalDevice.Device, renderFinishedSemaphore, nint.Zero);
+        renderFinishedSemaphore = VkSemaphore.Null;
+
+        vkDestroyFence(logicalDevice.Device, inFlightFence, nint.Zero);
+        inFlightFence = VkFence.Null;
+
         for (var i = 0; i < framebuffers.Length; i++)
         {
             vkDestroyFramebuffer(logicalDevice.Device, framebuffers[i], nint.Zero);
@@ -191,6 +208,24 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
                 throw new ApplicationException("Failed to create framebuffer!");
             }
         }
+
+        var semaphoreCreateInfo = VkSemaphoreCreateInfo.New();
+        if (vkCreateSemaphore(logicalDevice.Device, &semaphoreCreateInfo, null, out imageAvailableSemaphore) is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to create image available semaphore!");
+        }
+
+        if (vkCreateSemaphore(logicalDevice.Device, &semaphoreCreateInfo, null, out renderFinishedSemaphore) is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to create render finished semaphore!");
+        }
+
+        var fenceCreateInfo = VkFenceCreateInfo.New();
+        fenceCreateInfo.flags = VkFenceCreateFlags.Signaled;
+        if (vkCreateFence(logicalDevice.Device, &fenceCreateInfo, null, out inFlightFence) is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to create in flight fence!");
+        }
     }
 
     private VkExtent2D ChooseSwapExtent()
@@ -308,6 +343,42 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
             {
                 throw new ApplicationException("Failed to get physical device surface present modes!");
             }
+        }
+    }
+
+    public unsafe void AquireNextImage()
+    {
+        vkWaitForFences(logicalDevice.Device, 1, ref inFlightFence, true, ulong.MaxValue);
+        vkResetFences(logicalDevice.Device, 1, ref inFlightFence);
+
+        if (vkAcquireNextImageKHR(logicalDevice.Device, swapchain, ulong.MaxValue, imageAvailableSemaphore, VkFence.Null, ref imageIndex) is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to acquire next image!");
+        }
+    }
+
+    public unsafe void Present()
+    {
+        var presentInfo = VkPresentInfoKHR.New();
+        presentInfo.waitSemaphoreCount = 1;
+        fixed (VkSemaphore* pRenderFinishedSemaphore = &renderFinishedSemaphore)
+        {
+            presentInfo.pWaitSemaphores = pRenderFinishedSemaphore;
+        }
+        presentInfo.swapchainCount = 1;
+        fixed (VkSwapchainKHR* pSwapchains = &swapchain)
+        {
+            presentInfo.pSwapchains = pSwapchains;
+        }
+
+        fixed (uint* pImageIndex = &imageIndex)
+        {
+            presentInfo.pImageIndices = pImageIndex;
+        }
+
+        if (vkQueuePresentKHR(logicalDevice.PresentQueue, &presentInfo) is not VkResult.Success)
+        {
+            throw new ApplicationException("Failed to present image!");
         }
     }
 }
