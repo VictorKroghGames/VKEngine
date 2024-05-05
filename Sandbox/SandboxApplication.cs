@@ -3,7 +3,7 @@ using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, ISwapChain swapChain) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -25,6 +25,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
         window.Initialize();
 
         graphicsContext.Initialize();
+
+        shaderLibrary.Load("shader",
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"), ShaderModuleType.Fragment)
+        );
 
         swapChain.Initialize();
 
