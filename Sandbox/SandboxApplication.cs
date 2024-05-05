@@ -26,7 +26,9 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
         graphicsContext.Initialize();
 
-        swapChain.Initialize();
+        var renderPass = renderPassFactory.CreateRenderPass();
+
+        swapChain.Initialize(renderPass);
 
         //shaderLibrary.Load("shader",
         //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),
@@ -37,8 +39,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_tutorial.vert.spv"), ShaderModuleType.Vertex),
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_tutorial.frag.spv"), ShaderModuleType.Fragment)
         );
-
-        var renderPass = renderPassFactory.CreateRenderPass();
 
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {

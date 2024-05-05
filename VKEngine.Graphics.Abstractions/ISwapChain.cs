@@ -2,6 +2,6 @@
 
 public interface ISwapChain
 {
-    void Initialize();
+    void Initialize(IRenderPass renderPass);
     void Cleanup();
 }

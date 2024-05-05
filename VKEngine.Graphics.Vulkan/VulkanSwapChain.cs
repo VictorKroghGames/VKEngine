@@ -11,6 +11,7 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
     internal VkSwapchainKHR swapchain = VkSwapchainKHR.Null;
     internal VkImage[] images = [];
     internal VkImageView[] imageViews = [];
+    internal VkFramebuffer[] framebuffers = [];
 
     internal VkSurfaceCapabilitiesKHR surfaceCapabilities;
     internal VkSurfaceFormatKHR surfaceFormat;
@@ -22,19 +23,30 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
     private VkSurfaceFormatKHR[] supportedSurfaceFormats = [];
     private VkPresentModeKHR[] supportedPresentModes = [];
 
-    public void Initialize()
+    public void Initialize(IRenderPass renderPass)
     {
         if (graphicsContext is not IVulkanGraphicsContext vulkanGraphicsContext)
         {
             throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanGraphicsContext!");
         }
 
+        if(renderPass is not VulkanRenderPass vulkanRenderPass)
+        {
+            throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanRenderPass!");
+        }
+
         CreateSurface(vulkanGraphicsContext);
-        CreateSwapChain();
+        CreateSwapChain(vulkanRenderPass);
     }
 
     public void Cleanup()
     {
+        for (var i = 0; i < framebuffers.Length; i++)
+        {
+            vkDestroyFramebuffer(logicalDevice.Device, framebuffers[i], nint.Zero);
+            framebuffers[i] = VkFramebuffer.Null;
+        }
+
         for (var i = 0; i < imageViews.Length; i++)
         {
             vkDestroyImageView(logicalDevice.Device, imageViews[i], nint.Zero);
@@ -67,7 +79,7 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
         surface = new VkSurfaceKHR((ulong)surfacePtr.ToInt64());
     }
 
-    private unsafe void CreateSwapChain()
+    private unsafe void CreateSwapChain(VulkanRenderPass renderPass)
     {
         QuerySwapChainSupport(physicalDevice);
 
@@ -160,6 +172,25 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
             }
         }
 
+        framebuffers = new VkFramebuffer[swapChainImageCount];
+        for (var i = 0; i < swapChainImageCount; i++)
+        {
+            var framebufferCreateInfo = VkFramebufferCreateInfo.New();
+            framebufferCreateInfo.renderPass = renderPass.renderPass;
+            framebufferCreateInfo.attachmentCount = 1;
+            fixed (VkImageView* pImageView = &imageViews[i])
+            {
+                framebufferCreateInfo.pAttachments = pImageView;
+            }
+            framebufferCreateInfo.width = extent.width;
+            framebufferCreateInfo.height = extent.height;
+            framebufferCreateInfo.layers = 1;
+
+            if (vkCreateFramebuffer(logicalDevice.Device, &framebufferCreateInfo, null, out framebuffers[i]) is not VkResult.Success)
+            {
+                throw new ApplicationException("Failed to create framebuffer!");
+            }
+        }
     }
 
     private VkExtent2D ChooseSwapExtent()
