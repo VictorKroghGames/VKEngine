@@ -25,6 +25,12 @@
     <None Update="libs\glfw3.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="shaders\khronos_vulkan_tutorial.frag.spv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="shaders\khronos_vulkan_tutorial.vert.spv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="shaders\shader.frag.spv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

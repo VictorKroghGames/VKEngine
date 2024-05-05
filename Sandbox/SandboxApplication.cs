@@ -3,7 +3,7 @@ using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -26,12 +26,25 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
         graphicsContext.Initialize();
 
-        shaderLibrary.Load("shader",
-            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),
-            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"), ShaderModuleType.Fragment)
+        swapChain.Initialize();
+
+        //shaderLibrary.Load("shader",
+        //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),
+        //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"), ShaderModuleType.Fragment)
+        //);
+
+        shaderLibrary.Load("khronos_vulkan_tutorial",
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_tutorial.vert.spv"), ShaderModuleType.Vertex),
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_tutorial.frag.spv"), ShaderModuleType.Fragment)
         );
 
-        swapChain.Initialize();
+        var renderPass = renderPassFactory.CreateRenderPass();
+
+        var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
+        {
+            Shader = shaderLibrary.Get("khronos_vulkan_tutorial") ?? throw new InvalidOperationException("Shader not found!"),
+            RenderPass = renderPass
+        });
 
         testRenderer.Initialize();
 
@@ -54,6 +67,10 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
         }
 
         testRenderer.Cleanup();
+
+        pipeline.Cleanup();
+
+        renderPass.Cleanup();
 
         swapChain.Cleanup();
 
