@@ -16,6 +16,7 @@ public static class VKEngineContainerBuilderExtensions
         containerBuilder.Services.AddSingleton<IShaderFactory, VulkanShaderFactory>();
         containerBuilder.Services.AddSingleton<IRenderPassFactory, VulkanRenderPassFactory>();
         containerBuilder.Services.AddSingleton<IPipelineFactory, VulkanPipelineFactory>();
+        containerBuilder.Services.AddSingleton<ICommandPoolFactory, VulkanCommandPoolFactory>();
 
         containerBuilder.Services.AddSingleton<ITestRenderer, VulkanTutorial>();
 

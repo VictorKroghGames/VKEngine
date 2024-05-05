@@ -3,7 +3,7 @@ using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandPoolFactory commandPoolFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -46,7 +46,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
             RenderPass = renderPass
         });
 
-        testRenderer.Initialize();
+        var commandPool = commandPoolFactory.CreateCommandPool();
+
+        var commandBuffer = commandPool.AllocateCommandBuffer();
+
+        //testRenderer.Initialize();
 
         while (isRunning)
         {
@@ -60,13 +64,29 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
                 actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
             }
 
-            testRenderer.RenderTriangle();
+            commandBuffer.Begin();
+
+            commandBuffer.BeginRenderPass(renderPass);
+
+            commandBuffer.BindPipeline(pipeline);
+
+            commandBuffer.Draw();
+
+            commandBuffer.EndRenderPass();
+
+            commandBuffer.End();
+
+            //testRenderer.RenderTriangle();
 
             window.Update();
             isRunning = window.IsRunning;
         }
 
-        testRenderer.Cleanup();
+        //testRenderer.Cleanup();
+
+        commandPool.FreeCommandBuffer(commandBuffer);
+
+        commandPool.Cleanup();
 
         pipeline.Cleanup();
 

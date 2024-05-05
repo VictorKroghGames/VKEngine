@@ -15,7 +15,7 @@ internal sealed class VulkanPipelineFactory(IVulkanLogicalDevice logicalDevice, 
 
 internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification pipelineSpecification) : IPipeline
 {
-    private VkPipeline pipeline;
+    internal VkPipeline pipeline;
     private VkPipelineLayout pipelineLayout;
 
     internal unsafe void Initialize()
