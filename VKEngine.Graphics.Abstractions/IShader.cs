@@ -3,4 +3,6 @@
 public interface IShader
 {
     string Name { get; }
+
+    void Cleanup();
 }

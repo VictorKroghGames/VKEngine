@@ -58,4 +58,10 @@ internal sealed class VulkanShader(IVulkanLogicalDevice vulkanLogicalDevice, str
     {
         return shaderModules.Values;
     }
+
+    public void Cleanup()
+    {
+        vkDestroyShaderModule(vulkanLogicalDevice.Device, shaderModules[ShaderModuleType.Vertex].Module, IntPtr.Zero);
+        vkDestroyShaderModule(vulkanLogicalDevice.Device, shaderModules[ShaderModuleType.Fragment].Module, IntPtr.Zero);
+    }
 }
