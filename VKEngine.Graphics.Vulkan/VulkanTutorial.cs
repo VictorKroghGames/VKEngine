@@ -36,6 +36,9 @@ internal unsafe class VulkanTutorial(IWindow window, IVulkanPhysicalDevice physi
     private VkImageView _textureImageView;
     private VkSampler _textureSampler;
 
+    private VkShaderModule vertexShaderModule = VkShaderModule.Null;
+    private VkShaderModule fragmentShaderModule = VkShaderModule.Null;
+
     // Swapchain stuff
     private RawList<VkFramebuffer> _scFramebuffers = new RawList<VkFramebuffer>();
 
@@ -108,6 +111,9 @@ internal unsafe class VulkanTutorial(IWindow window, IVulkanPhysicalDevice physi
         {
             vkDestroyFramebuffer(logicalDevice.Device, _scFramebuffers[i], null);
         }
+
+        vkDestroyShaderModule(logicalDevice.Device, vertexShaderModule, null);
+        vkDestroyShaderModule(logicalDevice.Device, fragmentShaderModule, null);
 
         vkDestroyPipeline(logicalDevice.Device, _graphicsPipeline, null);
         vkDestroyRenderPass(logicalDevice.Device, _renderPass, null);
@@ -258,17 +264,17 @@ internal unsafe class VulkanTutorial(IWindow window, IVulkanPhysicalDevice physi
         byte[] vertBytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"));
         byte[] fragBytes = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"));
 
-        VkShaderModule vertexShader = CreateShader(vertBytes);
-        VkShaderModule fragmentShader = CreateShader(fragBytes);
+        vertexShaderModule = CreateShader(vertBytes);
+        fragmentShaderModule = CreateShader(fragBytes);
 
         VkPipelineShaderStageCreateInfo vertCreateInfo = VkPipelineShaderStageCreateInfo.New();
         vertCreateInfo.stage = VkShaderStageFlags.Vertex;
-        vertCreateInfo.module = vertexShader;
+        vertCreateInfo.module = vertexShaderModule;
         vertCreateInfo.pName = Strings.main;
 
         VkPipelineShaderStageCreateInfo fragCreateInfo = VkPipelineShaderStageCreateInfo.New();
         fragCreateInfo.stage = VkShaderStageFlags.Fragment;
-        fragCreateInfo.module = fragmentShader;
+        fragCreateInfo.module = fragmentShaderModule;
         fragCreateInfo.pName = Strings.main;
 
         FixedArray2<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos
