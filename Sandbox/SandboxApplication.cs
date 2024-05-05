@@ -3,7 +3,7 @@ using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, ISwapChain swapChain) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -26,6 +26,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
         graphicsContext.Initialize();
 
+        swapChain.Initialize();
+
         testRenderer.Initialize();
 
         while (isRunning)
@@ -47,6 +49,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
         }
 
         testRenderer.Cleanup();
+
+        swapChain.Cleanup();
 
         graphicsContext.Cleanup();
 

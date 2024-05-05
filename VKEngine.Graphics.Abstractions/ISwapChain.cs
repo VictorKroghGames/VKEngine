@@ -2,10 +2,6 @@
 
 public interface ISwapChain
 {
-    uint CurrentImageIndex { get; }
-
-    ICommandBuffer CurrentCommandBuffer { get; }
-
-    void AquireNextImage();
-    void Present();
+    void Initialize();
+    void Cleanup();
 }

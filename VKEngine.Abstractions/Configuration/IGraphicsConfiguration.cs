@@ -2,5 +2,6 @@
 
 public interface IGraphicsConfiguration : IConfiguration
 {
+    uint FramesInFlight { get; init; }
     bool EnableVSync { get; init; }
 }

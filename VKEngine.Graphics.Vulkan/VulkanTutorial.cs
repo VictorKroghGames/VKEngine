@@ -11,9 +11,8 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsContext, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice) : ITestRenderer
+internal unsafe class VulkanTutorial(IWindow window, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : ITestRenderer
 {
-    private VkSurfaceKHR _surface;
     private VkPipelineLayout _pipelineLayout;
     private VkRenderPass _renderPass;
     private VkPipeline _graphicsPipeline;
@@ -60,9 +59,17 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
             0, 1, 2, 0, 2, 3,
         };
 
+    private VulkanSwapChain vulkanSwapChain = default!;
+
     public void Initialize()
     {
-        CreateSurface();
+        if(swapChain is not VulkanSwapChain vulkanSwapChain)
+        {
+            throw new InvalidOperationException("Swap chain is not a Vulkan swap chain.");
+        }
+
+        this.vulkanSwapChain = vulkanSwapChain;
+
         CreateSwapchain();
         CreateImageViews();
         CreateRenderPass();
@@ -129,7 +136,7 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
         vkDestroySemaphore(logicalDevice.Device, _renderCompleteSemaphore, null);
         vkDestroySemaphore(logicalDevice.Device, _imageAvailableSemaphore, null);
 
-        vkDestroySurfaceKHR(((IVulkanGraphicsContext)graphicsContext).Instance.Handle, _surface, null);
+        //vkDestroySurfaceKHR(((IVulkanGraphicsContext)graphicsContext).Instance.Handle, vulkanSwapChain.surface, null);
     }
     public void RenderTriangle()
     {
@@ -197,28 +204,12 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
         vkQueuePresentKHR(logicalDevice.PresentQueue, ref presentInfo);
     }
 
-    private void CreateSurface()
-    {
-        if(graphicsContext is not IVulkanGraphicsContext vulkanGraphicsContext)
-        {
-            throw new InvalidOperationException("Graphics context is not a Vulkan graphics context.");
-        }
-
-        var result = GLFW.CreateWindowSurface(vulkanGraphicsContext.Instance.Handle, window.NativeWindowHandle, IntPtr.Zero, out var surfacePtr);
-        if (result is not VkResult.Success)
-        {
-            throw new ApplicationException("Failed to create window surface!");
-        }
-
-        _surface = new VkSurfaceKHR((ulong)surfacePtr.ToInt64());
-    }
-
     private void CreateSwapchain()
     {
         uint surfaceFormatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.PhysicalDevice, _surface, ref surfaceFormatCount, null);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, ref surfaceFormatCount, null);
         VkSurfaceFormatKHR[] formats = new VkSurfaceFormatKHR[surfaceFormatCount];
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.PhysicalDevice, _surface, ref surfaceFormatCount, out formats[0]);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, ref surfaceFormatCount, out formats[0]);
 
         VkSurfaceFormatKHR surfaceFormat = new VkSurfaceFormatKHR();
         if (formats.Length == 1 && formats[0].format == VkFormat.Undefined)
@@ -242,9 +233,9 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
         }
 
         uint presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.PhysicalDevice, _surface, ref presentModeCount, null);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, ref presentModeCount, null);
         VkPresentModeKHR[] presentModes = new VkPresentModeKHR[presentModeCount];
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.PhysicalDevice, _surface, ref presentModeCount, out presentModes[0]);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, ref presentModeCount, out presentModes[0]);
 
         VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR;
         if (presentModes.Contains(VkPresentModeKHR.MailboxKHR))
@@ -256,11 +247,11 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
             presentMode = VkPresentModeKHR.ImmediateKHR;
         }
 
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.PhysicalDevice, _surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
         uint imageCount = surfaceCapabilities.minImageCount + 1;
 
         VkSwapchainCreateInfoKHR sci = VkSwapchainCreateInfoKHR.New();
-        sci.surface = _surface;
+        sci.surface = vulkanSwapChain.surface;
         sci.presentMode = presentMode;
         sci.imageFormat = surfaceFormat.format;
         sci.imageColorSpace = surfaceFormat.colorSpace;
@@ -573,7 +564,7 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
         VkSamplerCreateInfo samplerCI = VkSamplerCreateInfo.New();
         samplerCI.magFilter = VkFilter.Linear;
         samplerCI.minFilter = VkFilter.Linear;
-        samplerCI.anisotropyEnable = true;
+        samplerCI.anisotropyEnable = false;
         samplerCI.maxAnisotropy = 16;
         samplerCI.borderColor = VkBorderColor.IntOpaqueBlack;
         samplerCI.unnormalizedCoordinates = false;

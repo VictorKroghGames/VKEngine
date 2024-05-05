@@ -11,6 +11,7 @@ public static class VKEngineContainerBuilderExtensions
         containerBuilder.Services.AddSingleton<IGraphicsContext, VulkanGraphicsContext>();
         containerBuilder.Services.AddSingleton<IVulkanPhysicalDevice, VulkanPhysicalDevice>();
         containerBuilder.Services.AddSingleton<IVulkanLogicalDevice, VulkanLogicalDevice>();
+        containerBuilder.Services.AddSingleton<ISwapChain, VulkanSwapChain>();
 
         containerBuilder.Services.AddSingleton<ITestRenderer, VulkanTutorial>();
 
