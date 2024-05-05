@@ -49,6 +49,8 @@ internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
 
     public void Cleanup()
     {
+        vkDeviceWaitIdle(device);
+
         vkDestroyDevice(device, IntPtr.Zero);
     }
 

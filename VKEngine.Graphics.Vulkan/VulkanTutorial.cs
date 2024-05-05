@@ -84,6 +84,52 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
 
     public void Cleanup()
     {
+        vkDeviceWaitIdle(logicalDevice.Device);
+
+        vkDestroySampler(logicalDevice.Device, _textureSampler, null);
+        vkDestroyImageView(logicalDevice.Device, _textureImageView, null);
+        vkDestroyImage(logicalDevice.Device, _textureImage, null);
+        vkFreeMemory(logicalDevice.Device, _textureImageMemory, null);
+
+        vkDestroyDescriptorPool(logicalDevice.Device, _descriptorPool, null);
+
+        vkDestroyBuffer(logicalDevice.Device, _uboBuffer, null);
+        vkFreeMemory(logicalDevice.Device, _uboMemory, null);
+        vkDestroyBuffer(logicalDevice.Device, _uboStagingBuffer, null);
+        vkFreeMemory(logicalDevice.Device, _uboStagingMemory, null);
+
+        vkDestroyBuffer(logicalDevice.Device, _indexBuffer, null);
+        vkFreeMemory(logicalDevice.Device, _indexBufferMemory, null);
+
+        vkDestroyBuffer(logicalDevice.Device, _vertexBuffer, null);
+        vkFreeMemory(logicalDevice.Device, _vertexBufferMemory, null);
+
+        for (int i = 0; i < _scFramebuffers.Count; i++)
+        {
+            vkDestroyFramebuffer(logicalDevice.Device, _scFramebuffers[i], null);
+        }
+
+        vkDestroyPipeline(logicalDevice.Device, _graphicsPipeline, null);
+        vkDestroyRenderPass(logicalDevice.Device, _renderPass, null);
+        vkDestroyPipelineLayout(logicalDevice.Device, _pipelineLayout, null);
+        vkDestroyDescriptorSetLayout(logicalDevice.Device, _descriptoSetLayout, null);
+
+        // clear command buffers
+        vkFreeCommandBuffers(logicalDevice.Device, _commandPool, _commandBuffers.Count, ref _commandBuffers[0]);
+
+        for (int i = 0; i < _scImageViews.Count; i++)
+        {
+            vkDestroyImageView(logicalDevice.Device, _scImageViews[i], null);
+        }
+
+        vkDestroySwapchainKHR(logicalDevice.Device, _swapchain, null);
+
+        vkDestroyCommandPool(logicalDevice.Device, _commandPool, null);
+
+        vkDestroySemaphore(logicalDevice.Device, _renderCompleteSemaphore, null);
+        vkDestroySemaphore(logicalDevice.Device, _imageAvailableSemaphore, null);
+
+        vkDestroySurfaceKHR(((IVulkanGraphicsContext)graphicsContext).Instance.Handle, _surface, null);
     }
     public void RenderTriangle()
     {
