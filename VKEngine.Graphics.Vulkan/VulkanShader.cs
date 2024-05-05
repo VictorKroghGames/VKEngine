@@ -5,12 +5,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal interface IVulkanShader : IShader
-{
-    IEnumerable<VulkanShaderModule> GetShaderModules();
-}
-
-internal sealed class VulkanShader(IVulkanLogicalDevice vulkanLogicalDevice, string name, params ShaderModuleSpecification[] shaderModuleSpecifications) : IVulkanShader
+internal sealed class VulkanShader(IVulkanLogicalDevice vulkanLogicalDevice, string name, params ShaderModuleSpecification[] shaderModuleSpecifications) : IShader
 {
     private readonly Dictionary<ShaderModuleType, VulkanShaderModule> shaderModules = [];
 
@@ -54,7 +49,7 @@ internal sealed class VulkanShader(IVulkanLogicalDevice vulkanLogicalDevice, str
         }
     }
 
-    public IEnumerable<VulkanShaderModule> GetShaderModules()
+    internal IEnumerable<VulkanShaderModule> GetShaderModules()
     {
         return shaderModules.Values;
     }
