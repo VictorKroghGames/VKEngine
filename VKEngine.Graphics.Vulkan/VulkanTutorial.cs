@@ -13,15 +13,6 @@ namespace VKEngine.Graphics.Vulkan;
 
 internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsContext, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice) : ITestRenderer
 {
-    //private VkInstance _instance;
-    //private VkPhysicalDevice _physicalDevice;
-    //private VkPhysicalDeviceProperties _physicalDeviceProperties;
-    //private VkPhysicalDeviceFeatures _physicalDeviceFeatures;
-    //private uint _graphicsQueueIndex;
-    //private uint _presentQueueIndex;
-    //private VkDevice _device;
-    //private VkQueue _graphicsQueue;
-    //private VkQueue _presentQueue;
     private VkSurfaceKHR _surface;
     private VkPipelineLayout _pipelineLayout;
     private VkRenderPass _renderPass;
@@ -71,9 +62,6 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
 
     public void Initialize()
     {
-        //CreateInstance();
-        //CreatePhysicalDevice();
-        //CreateLogicalDevice();
         CreateSurface();
         CreateSwapchain();
         CreateImageViews();
@@ -162,149 +150,6 @@ internal unsafe class VulkanTutorial(IWindow window, IGraphicsContext graphicsCo
 
         vkQueuePresentKHR(logicalDevice.PresentQueue, ref presentInfo);
     }
-
-    //private void CreateInstance()
-    //{
-    //    VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New();
-    //    VkApplicationInfo appInfo = VkApplicationInfo.New();
-    //    appInfo.pApplicationName = Strings.AppName;
-    //    appInfo.pEngineName = Strings.EngineName;
-    //    appInfo.apiVersion = new Version(1, 0, 0);
-    //    appInfo.engineVersion = new Version(1, 0, 0);
-    //    appInfo.apiVersion = new Version(1, 0, 0);
-    //    instanceCreateInfo.pApplicationInfo = &appInfo;
-    //    RawList<IntPtr> instanceLayers = new RawList<IntPtr>();
-    //    RawList<IntPtr> instanceExtensions = new RawList<IntPtr>();
-    //    instanceExtensions.Add(Strings.VK_KHR_SURFACE_EXTENSION_NAME);
-    //    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-    //    {
-    //        instanceExtensions.Add(Strings.VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-    //    }
-    //    else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-    //    {
-    //        instanceExtensions.Add(Strings.VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-    //    }
-    //    else
-    //    {
-    //        throw new PlatformNotSupportedException();
-    //    }
-
-    //    bool debug = true;
-    //    if (debug)
-    //    {
-    //        instanceExtensions.Add(Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-    //        instanceLayers.Add(Strings.StandardValidationLayerName);
-    //    }
-
-    //    fixed (IntPtr* extensionsBase = &instanceExtensions.Items[0])
-    //    fixed (IntPtr* layersBase = &instanceLayers.Items[0])
-    //    {
-    //        instanceCreateInfo.enabledExtensionCount = instanceExtensions.Count;
-    //        instanceCreateInfo.ppEnabledExtensionNames = (byte**)extensionsBase;
-    //        instanceCreateInfo.enabledLayerCount = instanceLayers.Count;
-    //        instanceCreateInfo.ppEnabledLayerNames = (byte**)(layersBase);
-    //        CheckResult(vkCreateInstance(ref instanceCreateInfo, null, out _instance));
-    //    }
-    //}
-
-    //private unsafe void CreatePhysicalDevice()
-    //{
-    //    uint deviceCount = 0;
-    //    vkEnumeratePhysicalDevices(_instance, ref deviceCount, null);
-    //    if (deviceCount == 0)
-    //    {
-    //        throw new InvalidOperationException("No physical devices exist.");
-    //    }
-
-    //    vkEnumeratePhysicalDevices(_instance, ref deviceCount, ref _physicalDevice);
-    //    vkGetPhysicalDeviceProperties(_physicalDevice, out _physicalDeviceProperties);
-    //    string deviceName;
-    //    fixed (byte* utf8NamePtr = _physicalDeviceProperties.deviceName)
-    //    {
-    //        deviceName = Encoding.UTF8.GetString(utf8NamePtr, (int)MaxPhysicalDeviceNameSize);
-    //    }
-
-    //    vkGetPhysicalDeviceFeatures(_physicalDevice, out _physicalDeviceFeatures);
-
-    //    Console.WriteLine($"Using device: {deviceName}");
-    //}
-
-    //private unsafe void CreateLogicalDevice()
-    //{
-    //    GetQueueFamilyIndices();
-
-    //    HashSet<uint> familyIndices = new HashSet<uint> { _graphicsQueueIndex, _presentQueueIndex };
-    //    RawList<VkDeviceQueueCreateInfo> queueCreateInfos = new RawList<VkDeviceQueueCreateInfo>();
-
-    //    foreach (uint index in familyIndices)
-    //    {
-    //        VkDeviceQueueCreateInfo queueCreateInfo = VkDeviceQueueCreateInfo.New();
-    //        queueCreateInfo.queueFamilyIndex = _graphicsQueueIndex;
-    //        queueCreateInfo.queueCount = 1;
-    //        float priority = 1f;
-    //        queueCreateInfo.pQueuePriorities = &priority;
-    //        queueCreateInfos.Add(queueCreateInfo);
-    //    }
-
-    //    VkPhysicalDeviceFeatures deviceFeatures = new VkPhysicalDeviceFeatures();
-
-    //    VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New();
-
-    //    fixed (VkDeviceQueueCreateInfo* qciPtr = &queueCreateInfos.Items[0])
-    //    {
-    //        deviceCreateInfo.pQueueCreateInfos = qciPtr;
-    //        deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.Count;
-
-    //        deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-
-    //        byte* layerNames = Strings.StandardValidationLayerName;
-    //        deviceCreateInfo.enabledLayerCount = 1;
-    //        deviceCreateInfo.ppEnabledLayerNames = &layerNames;
-
-    //        byte* extensionNames = Strings.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-    //        deviceCreateInfo.enabledExtensionCount = 1;
-    //        deviceCreateInfo.ppEnabledExtensionNames = &extensionNames;
-
-    //        vkCreateDevice(_physicalDevice, ref deviceCreateInfo, null, out _device);
-    //    }
-
-    //    vkGetDeviceQueue(_device, _graphicsQueueIndex, 0, out _graphicsQueue);
-    //    VkQueue q;
-    //    vkGetDeviceQueue(_device, _presentQueueIndex, 0, out q);
-    //    _presentQueue = q;
-    //}
-
-    //private void GetQueueFamilyIndices()
-    //{
-    //    uint queueFamilyCount = 0;
-    //    vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, ref queueFamilyCount, null);
-    //    VkQueueFamilyProperties[] qfp = new VkQueueFamilyProperties[queueFamilyCount];
-    //    vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, ref queueFamilyCount, out qfp[0]);
-
-    //    bool foundGraphics = false;
-    //    bool foundPresent = false;
-
-    //    for (uint i = 0; i < qfp.Length; i++)
-    //    {
-    //        if ((qfp[i].queueFlags & VkQueueFlags.Graphics) != 0)
-    //        {
-    //            _graphicsQueueIndex = i;
-    //            foundGraphics = true;
-    //        }
-
-    //        vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _surface, out VkBool32 presentSupported);
-    //        if (presentSupported)
-    //        {
-    //            _presentQueueIndex = i;
-    //            foundPresent = true;
-    //        }
-
-    //        if (foundGraphics && foundPresent)
-    //        {
-    //            break;
-    //        }
-    //    }
-    //}
 
     private void CreateSurface()
     {
