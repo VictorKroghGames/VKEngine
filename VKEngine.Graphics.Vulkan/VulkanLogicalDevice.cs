@@ -38,7 +38,6 @@ internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
         }
 
         var deviceFeatures = new VkPhysicalDeviceFeatures();
-        deviceFeatures.samplerAnisotropy = false;
         CreateLogicalDeviceUnsafe(physicalDevice, deviceFeatures);
 
         vkGetDeviceQueue(device, physicalDevice.QueueFamilyIndices.Graphics, 0, out graphicsQueue);
@@ -92,10 +91,25 @@ internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
         deviceCreateInfo.enabledLayerCount = 1;
         deviceCreateInfo.ppEnabledLayerNames = &layerNames;
 
-        byte* extensionNames = Strings.VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-        deviceCreateInfo.enabledExtensionCount = 1;
-        deviceCreateInfo.ppEnabledExtensionNames = &extensionNames;
+        var supportedExtensions = GetExtensions(physicalDevice);
+        fixed (IntPtr* extensionsPtr = supportedExtensions.Items)
+        {
+            deviceCreateInfo.enabledExtensionCount = (uint)supportedExtensions.Count;
+            deviceCreateInfo.ppEnabledExtensionNames = (byte**)extensionsPtr;
+        }
 
         return vkCreateDevice(physicalDevice.PhysicalDevice, ref deviceCreateInfo, null, out device);
+    }
+
+    private RawList<IntPtr> GetExtensions(IVulkanPhysicalDevice physicalDevice)
+    {
+        var extensions = new RawList<IntPtr>();
+
+        if (physicalDevice.IsExtensionSupported("VK_KHR_swapchain"))
+        {
+            extensions.Add(Strings.VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        }
+
+        return extensions;
     }
 }

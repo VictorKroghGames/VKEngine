@@ -18,6 +18,8 @@ public interface IVulkanPhysicalDevice
 
     void Initialize(VkInstance vkInstance);
     void Cleanup();
+
+    bool IsExtensionSupported(string extensionName);
 }
 
 internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
@@ -130,5 +132,32 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
         }
 
         queueFamilyIndices.Present = queueFamilyIndices.Graphics;
+    }
+
+    public unsafe bool IsExtensionSupported(string extensionName)
+    {
+        var extensionCount = 0u;
+        vkEnumerateDeviceExtensionProperties(physicalDevice, (byte*)null, &extensionCount, null);
+
+        var extensionProperties = stackalloc VkExtensionProperties[(int)extensionCount];
+        vkEnumerateDeviceExtensionProperties(physicalDevice, (byte*)null, &extensionCount, &extensionProperties[0]);
+
+        for (int i = 0; i < extensionCount; i++)
+        {
+            var extensionProperty = extensionProperties[i];
+
+            var str = System.Runtime.InteropServices.Marshal.PtrToStringUTF8((IntPtr)extensionProperty.extensionName);
+            if(string.IsNullOrWhiteSpace(str))
+            {
+                continue;
+            }
+
+            if (str.Equals(extensionName, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
