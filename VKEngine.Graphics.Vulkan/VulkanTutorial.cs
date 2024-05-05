@@ -37,12 +37,7 @@ internal unsafe class VulkanTutorial(IWindow window, IVulkanPhysicalDevice physi
     private VkSampler _textureSampler;
 
     // Swapchain stuff
-    //private RawList<VkImage> _scImages = new RawList<VkImage>();
-    //private RawList<VkImageView> _scImageViews = new RawList<VkImageView>();
     private RawList<VkFramebuffer> _scFramebuffers = new RawList<VkFramebuffer>();
-    //private VkSwapchainKHR _swapchain;
-    //private VkFormat _scImageFormat;
-    //private VkExtent2D _scExtent;
 
     private DateTime _startTime = DateTime.UtcNow;
 
@@ -70,8 +65,6 @@ internal unsafe class VulkanTutorial(IWindow window, IVulkanPhysicalDevice physi
 
         this.vulkanSwapChain = vulkanSwapChain;
 
-        //CreateSwapchain();
-        //CreateImageViews();
         CreateRenderPass();
         CreateDescriptorSetLayout();
         CreateGraphicsPipeline();
@@ -124,19 +117,10 @@ internal unsafe class VulkanTutorial(IWindow window, IVulkanPhysicalDevice physi
         // clear command buffers
         vkFreeCommandBuffers(logicalDevice.Device, _commandPool, _commandBuffers.Count, ref _commandBuffers[0]);
 
-        //for (int i = 0; i < _scImageViews.Count; i++)
-        //{
-        //    vkDestroyImageView(logicalDevice.Device, _scImageViews[i], null);
-        //}
-
-        //vkDestroySwapchainKHR(logicalDevice.Device, _swapchain, null);
-
         vkDestroyCommandPool(logicalDevice.Device, _commandPool, null);
 
         vkDestroySemaphore(logicalDevice.Device, _renderCompleteSemaphore, null);
         vkDestroySemaphore(logicalDevice.Device, _imageAvailableSemaphore, null);
-
-        //vkDestroySurfaceKHR(((IVulkanGraphicsContext)graphicsContext).Instance.Handle, vulkanSwapChain.surface, null);
     }
     public void RenderTriangle()
     {
@@ -204,108 +188,6 @@ internal unsafe class VulkanTutorial(IWindow window, IVulkanPhysicalDevice physi
 
         vkQueuePresentKHR(logicalDevice.PresentQueue, ref presentInfo);
     }
-
-    //private void CreateSwapchain()
-    //{
-    //    uint surfaceFormatCount = 0;
-    //    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, ref surfaceFormatCount, null);
-    //    VkSurfaceFormatKHR[] formats = new VkSurfaceFormatKHR[surfaceFormatCount];
-    //    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, ref surfaceFormatCount, out formats[0]);
-
-    //    VkSurfaceFormatKHR surfaceFormat = new VkSurfaceFormatKHR();
-    //    if (formats.Length == 1 && formats[0].format == VkFormat.Undefined)
-    //    {
-    //        surfaceFormat = new VkSurfaceFormatKHR { colorSpace = VkColorSpaceKHR.SrgbNonlinearKHR, format = VkFormat.B8g8r8a8Unorm };
-    //    }
-    //    else
-    //    {
-    //        foreach (VkSurfaceFormatKHR format in formats)
-    //        {
-    //            if (format.colorSpace == VkColorSpaceKHR.SrgbNonlinearKHR && format.format == VkFormat.B8g8r8a8Unorm)
-    //            {
-    //                surfaceFormat = format;
-    //                break;
-    //            }
-    //        }
-    //        if (surfaceFormat.format == VkFormat.Undefined)
-    //        {
-    //            surfaceFormat = formats[0];
-    //        }
-    //    }
-
-    //    uint presentModeCount = 0;
-    //    vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, ref presentModeCount, null);
-    //    VkPresentModeKHR[] presentModes = new VkPresentModeKHR[presentModeCount];
-    //    vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, ref presentModeCount, out presentModes[0]);
-
-    //    VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR;
-    //    if (presentModes.Contains(VkPresentModeKHR.MailboxKHR))
-    //    {
-    //        presentMode = VkPresentModeKHR.MailboxKHR;
-    //    }
-    //    else if (presentModes.Contains(VkPresentModeKHR.ImmediateKHR))
-    //    {
-    //        presentMode = VkPresentModeKHR.ImmediateKHR;
-    //    }
-
-    //    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice.PhysicalDevice, vulkanSwapChain.surface, out VkSurfaceCapabilitiesKHR surfaceCapabilities);
-    //    uint imageCount = surfaceCapabilities.minImageCount + 1;
-
-    //    VkSwapchainCreateInfoKHR sci = VkSwapchainCreateInfoKHR.New();
-    //    sci.surface = vulkanSwapChain.surface;
-    //    sci.presentMode = presentMode;
-    //    sci.imageFormat = surfaceFormat.format;
-    //    sci.imageColorSpace = surfaceFormat.colorSpace;
-    //    sci.imageExtent = new VkExtent2D { width = (uint)window.Width, height = (uint)window.Height };
-    //    sci.minImageCount = imageCount;
-    //    sci.imageArrayLayers = 1;
-    //    sci.imageUsage = VkImageUsageFlags.ColorAttachment;
-
-    //    FixedArray2<uint> queueFamilyIndices = new FixedArray2<uint>(physicalDevice.QueueFamilyIndices.Graphics, physicalDevice.QueueFamilyIndices.Present);
-
-    //    if (physicalDevice.QueueFamilyIndices.Graphics != physicalDevice.QueueFamilyIndices.Present)
-    //    {
-    //        sci.imageSharingMode = VkSharingMode.Concurrent;
-    //        sci.queueFamilyIndexCount = 2;
-    //        sci.pQueueFamilyIndices = &queueFamilyIndices.First;
-    //    }
-    //    else
-    //    {
-    //        sci.imageSharingMode = VkSharingMode.Exclusive;
-    //        sci.queueFamilyIndexCount = 0;
-    //    }
-
-    //    sci.preTransform = surfaceCapabilities.currentTransform;
-    //    sci.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
-    //    sci.clipped = true;
-
-    //    VkSwapchainKHR oldSwapchain = _swapchain;
-    //    sci.oldSwapchain = oldSwapchain;
-
-    //    vkCreateSwapchainKHR(logicalDevice.Device, ref sci, null, out _swapchain);
-    //    if (oldSwapchain != 0)
-    //    {
-    //        vkDestroySwapchainKHR(logicalDevice.Device, oldSwapchain, null);
-    //    }
-
-    //    // Get the images
-    //    uint scImageCount = 0;
-    //    vkGetSwapchainImagesKHR(logicalDevice.Device, _swapchain, ref scImageCount, null);
-    //    _scImages.Count = scImageCount;
-    //    vkGetSwapchainImagesKHR(logicalDevice.Device, _swapchain, ref scImageCount, out _scImages.Items[0]);
-
-    //    _scImageFormat = surfaceFormat.format;
-    //    _scExtent = sci.imageExtent;
-    //}
-
-    //private void CreateImageViews()
-    //{
-    //    _scImageViews.Resize(_scImages.Count);
-    //    for (int i = 0; i < _scImages.Count; i++)
-    //    {
-    //        CreateImageView(_scImages[i], _scImageFormat, out _scImageViews[i]);
-    //    }
-    //}
 
     private void CreateRenderPass()
     {
