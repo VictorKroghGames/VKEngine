@@ -13,7 +13,10 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
 
     public unsafe void Begin()
     {
-        vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags.None);
+        if (vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags.None) is not VkResult.Success)
+        {
+            throw new InvalidOperationException("Failed to reset command buffer!");
+        }
 
         var commandBufferBeginInfo = VkCommandBufferBeginInfo.New();
 
@@ -43,7 +46,7 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
         var submitInfo = VkSubmitInfo.New();
         submitInfo.pWaitDstStageMask = &pipelineStageFlags;
         submitInfo.waitSemaphoreCount = 1;
-        fixed(VkSemaphore* waitSemaphorePtr = &vulkanSwapChain.imageAvailableSemaphore)
+        fixed (VkSemaphore* waitSemaphorePtr = &vulkanSwapChain.imageAvailableSemaphore)
         {
             submitInfo.pWaitSemaphores = waitSemaphorePtr;
         }
@@ -89,6 +92,8 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
         clearValues[0].color.float32_1 = 0.4f;
         clearValues[0].color.float32_2 = 0.8f;
         clearValues[0].color.float32_3 = 1.0f;
+        //clearValues[0].depthStencil.depth = 1.0f;
+        //clearValues[0].depthStencil.stencil = 0xFFFFFFFF;
         renderPassBeginInfo.pClearValues = clearValues;
         renderPassBeginInfo.clearValueCount = 1;
 

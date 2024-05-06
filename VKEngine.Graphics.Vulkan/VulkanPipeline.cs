@@ -105,7 +105,7 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
         pipelineRasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
         pipelineRasterizationStateCreateInfo.depthBiasClamp = 0.0f;
         pipelineRasterizationStateCreateInfo.depthBiasSlopeFactor = 0.0f;
-
+        
         // MULTISAMPLING
         var pipelineMultisampleStateCreateInfo = VkPipelineMultisampleStateCreateInfo.New();
         pipelineMultisampleStateCreateInfo.sampleShadingEnable = false;
