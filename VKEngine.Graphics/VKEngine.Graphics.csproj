@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ImGui.NET" Version="1.90.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\VKEngine.Abstractions\VKEngine.Abstractions.csproj" />
     <ProjectReference Include="..\VKEngine.Graphics.Vulkan\VKEngine.Graphics.Vulkan.csproj" />
   </ItemGroup>

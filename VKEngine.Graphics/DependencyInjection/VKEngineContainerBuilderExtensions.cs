@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using VKEngine.Graphics;
+using VKEngine.Graphics.ImGui;
 
 namespace VKEngine.DependencyInjection;
 
@@ -19,6 +20,8 @@ public static class VKEngineContainerBuilderExtensions
 
         containerBuilder.Services.AddSingleton<IShaderLibrary, ShaderLibrary>();
         containerBuilder.Services.AddSingleton<IRenderer, TRenderer>();
+
+        containerBuilder.Services.AddSingleton<IImGuiRenderer, ImGuiRenderer>();
 
         return containerBuilder;
     }
