@@ -51,6 +51,8 @@ internal sealed class VulkanCommandPool(IVulkanPhysicalDevice physicalDevice, IV
 
     public unsafe void FreeCommandBuffer(ICommandBuffer commandBuffer)
     {
+        vkDeviceWaitIdle(logicalDevice.Device);
+
         if (commandBuffer is not VulkanCommandBuffer vulkanCommandBuffer)
         {
             throw new InvalidOperationException("Invalid command buffer type!");
