@@ -122,6 +122,11 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
             throw new InvalidOperationException("Invalid swap chain type!");
         }
 
+        // https://anki3d.org/vulkan-coordinate-system/
+        //const int miny = 0;
+        //var flippedY = vulkanSwapChain.extent.height - miny;
+        //var flippedHeight = -(vulkanSwapChain.extent.height - miny);
+
         var viewport = new VkViewport
         {
             x = 0.0f,
