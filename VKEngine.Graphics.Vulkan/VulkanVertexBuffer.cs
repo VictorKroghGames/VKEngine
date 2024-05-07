@@ -36,7 +36,7 @@ internal sealed class VulkanVertexBuffer(IVulkanPhysicalDevice physicalDevice, I
 
         var memoryAllocateInfo = VkMemoryAllocateInfo.New();
         memoryAllocateInfo.allocationSize = memoryRequirements.size;
-        memoryAllocateInfo.memoryTypeIndex = FindMemoryType(memoryRequirements.memoryTypeBits, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent);
+        memoryAllocateInfo.memoryTypeIndex = physicalDevice.FindMemoryType(memoryRequirements.memoryTypeBits, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent);
 
         if (vkAllocateMemory(logicalDevice.Device, &memoryAllocateInfo, null, out bufferMemory) is not VkResult.Success)
         {
@@ -81,19 +81,5 @@ internal sealed class VulkanVertexBuffer(IVulkanPhysicalDevice physicalDevice, I
             vertices[14] = 1.0f;
         }
         vkUnmapMemory(logicalDevice.Device, bufferMemory);
-    }
-
-    private unsafe uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags memoryPropertyFlags)
-    {
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice.PhysicalDevice, out var memoryProperties);
-        for (uint i = 0; i < memoryProperties.memoryTypeCount; i++)
-        {
-            if ((typeFilter & ((int)1U << (int)i)) != 0 && (memoryProperties.GetMemoryType(i).propertyFlags & memoryPropertyFlags) == memoryPropertyFlags)
-            {
-                return (uint)i;
-            }
-        }
-
-        throw new ApplicationException("failed to find suitable memory type!");
     }
 }
