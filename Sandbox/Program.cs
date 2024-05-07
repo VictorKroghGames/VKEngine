@@ -10,7 +10,8 @@ builder.AddConfiguration<VKEngineConfiguration>(config =>
     {
         WindowTitle = "VKEngine Sandbox",
         WindowWidth = 1024,
-        WindowHeight = 768
+        WindowHeight = 768,
+        IsResizable = true
     };
     config.GraphicsConfiguration = new GraphicsConfiguration
     {
