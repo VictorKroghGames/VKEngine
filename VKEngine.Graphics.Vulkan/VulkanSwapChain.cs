@@ -26,7 +26,7 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
     private uint imageCount = 0;
     internal uint imageIndex = 0;
 
-    private IRenderPass renderPass;
+    private VulkanRenderPass vulkanRenderPass;
     private VkSurfaceFormatKHR[] supportedSurfaceFormats = [];
     private VkPresentModeKHR[] supportedPresentModes = [];
 
@@ -41,7 +41,7 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
         {
             throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanRenderPass!");
         }
-        this.renderPass = renderPass;
+        this.vulkanRenderPass = vulkanRenderPass;
 
         CreateSurface(vulkanGraphicsContext);
 
@@ -368,7 +368,7 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
         if (result is VkResult.ErrorOutOfDateKHR || result is VkResult.SuboptimalKHR)
         {
             CleanupSwapChain();
-            Initialize(renderPass);
+            CreateSwapChain(vulkanRenderPass);
             return;
         }
 
@@ -408,7 +408,7 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
         if (result is VkResult.ErrorOutOfDateKHR || result is VkResult.SuboptimalKHR)
         {
             CleanupSwapChain();
-            Initialize(renderPass);
+            CreateSwapChain(vulkanRenderPass);
             return;
         }
 
