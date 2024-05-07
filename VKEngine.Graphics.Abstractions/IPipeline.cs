@@ -5,6 +5,7 @@ namespace VKEngine.Graphics;
 public readonly struct PipelineSpecification
 {
     public FrontFace FrontFace { get; init; }
+    public CullMode CullMode { get; init; }
 
     public IShader Shader { get; init; }
     public IRenderPass RenderPass { get; init; }

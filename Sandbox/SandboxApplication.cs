@@ -43,6 +43,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {
+            CullMode = CullMode.Back,
             FrontFace = FrontFace.Clockwise,
             Shader = shaderLibrary.Get("khronos_vulkan_tutorial") ?? throw new InvalidOperationException("Shader not found!"),
             RenderPass = renderPass

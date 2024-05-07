@@ -13,14 +13,14 @@ internal sealed class VulkanPipelineFactory(IVulkanLogicalDevice logicalDevice, 
     }
 }
 
-internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification pipelineSpecification) : IPipeline
+internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification specification) : IPipeline
 {
     internal VkPipeline pipeline;
     private VkPipelineLayout pipelineLayout;
 
     internal unsafe void Initialize()
     {
-        if (pipelineSpecification.Shader is not VulkanShader shader)
+        if (specification.Shader is not VulkanShader shader)
         {
             throw new InvalidOperationException("Invalid shader type!");
         }
@@ -30,7 +30,7 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
             throw new InvalidOperationException("Invalid swap chain type!");
         }
 
-        if (pipelineSpecification.RenderPass is not VulkanRenderPass renderPass)
+        if (specification.RenderPass is not VulkanRenderPass renderPass)
         {
             throw new InvalidOperationException("Invalid render pass type!");
         }
@@ -99,8 +99,8 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
         pipelineRasterizationStateCreateInfo.rasterizerDiscardEnable = false;
         pipelineRasterizationStateCreateInfo.polygonMode = VkPolygonMode.Fill;
         pipelineRasterizationStateCreateInfo.lineWidth = 1.0f;
-        pipelineRasterizationStateCreateInfo.cullMode = VkCullModeFlags.Back;
-        pipelineRasterizationStateCreateInfo.frontFace = (VkFrontFace)pipelineSpecification.FrontFace;
+        pipelineRasterizationStateCreateInfo.cullMode = (VkCullModeFlags)specification.CullMode;
+        pipelineRasterizationStateCreateInfo.frontFace = (VkFrontFace)specification.FrontFace;
         pipelineRasterizationStateCreateInfo.depthBiasEnable = false;
         pipelineRasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
         pipelineRasterizationStateCreateInfo.depthBiasClamp = 0.0f;

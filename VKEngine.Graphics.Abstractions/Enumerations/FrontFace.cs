@@ -2,6 +2,6 @@
 
 public enum FrontFace
 {
-    CounterClockwise,
-    Clockwise
+    CounterClockwise = 0,
+    Clockwise = 1
 }
