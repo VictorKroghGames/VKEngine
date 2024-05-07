@@ -93,8 +93,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
         //testRenderer.Cleanup();
 
-
-
         commandPool.FreeCommandBuffer(commandBuffer);
 
         commandPool.Cleanup();
