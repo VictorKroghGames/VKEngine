@@ -1,7 +1,11 @@
-﻿namespace VKEngine.Graphics;
+﻿using VKEngine.Graphics.Enumerations;
+
+namespace VKEngine.Graphics;
 
 public readonly struct PipelineSpecification
 {
+    public FrontFace FrontFace { get; init; }
+
     public IShader Shader { get; init; }
     public IRenderPass RenderPass { get; init; }
 }

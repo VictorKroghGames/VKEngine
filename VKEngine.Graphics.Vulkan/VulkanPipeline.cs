@@ -100,7 +100,7 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
         pipelineRasterizationStateCreateInfo.polygonMode = VkPolygonMode.Fill;
         pipelineRasterizationStateCreateInfo.lineWidth = 1.0f;
         pipelineRasterizationStateCreateInfo.cullMode = VkCullModeFlags.Back;
-        pipelineRasterizationStateCreateInfo.frontFace = VkFrontFace.CounterClockwise;
+        pipelineRasterizationStateCreateInfo.frontFace = (VkFrontFace)pipelineSpecification.FrontFace;
         pipelineRasterizationStateCreateInfo.depthBiasEnable = false;
         pipelineRasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
         pipelineRasterizationStateCreateInfo.depthBiasClamp = 0.0f;
