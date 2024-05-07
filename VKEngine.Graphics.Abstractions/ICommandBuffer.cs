@@ -12,6 +12,7 @@ public interface ICommandBuffer
     void EndRenderPass();
 
     void BindPipeline(IPipeline pipeline);
+    void BindBuffer(IVertexBuffer vertexBuffer);
     void Draw();
 }
 

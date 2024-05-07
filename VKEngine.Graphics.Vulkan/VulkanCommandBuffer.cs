@@ -115,6 +115,17 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
         vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipeline);
     }
 
+    public unsafe void BindBuffer(IVertexBuffer vertexBuffer)
+    {
+        if(vertexBuffer is not VulkanVertexBuffer vulkanVertexBuffer)
+        {
+            throw new InvalidOperationException("Invalid vertex buffer type!");
+        }
+
+        var offset = 0ul;
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, ref vulkanVertexBuffer.buffer, &offset);
+    }
+
     public unsafe void Draw()
     {
         if (swapChain is not VulkanSwapChain vulkanSwapChain)

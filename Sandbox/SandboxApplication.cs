@@ -4,7 +4,7 @@ using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandPoolFactory commandPoolFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandPoolFactory commandPoolFactory, IVertexBufferFactory vertexBufferFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -36,22 +36,29 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
         //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"), ShaderModuleType.Fragment)
         //);
 
-        shaderLibrary.Load("khronos_vulkan_tutorial",
-            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_tutorial.vert.spv"), ShaderModuleType.Vertex),
-            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_tutorial.frag.spv"), ShaderModuleType.Fragment)
+        shaderLibrary.Load("khronos_vulkan_vertex_buffer",
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.vert.spv"), ShaderModuleType.Vertex),
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.frag.spv"), ShaderModuleType.Fragment)
         );
 
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {
             CullMode = CullMode.Back,
             FrontFace = FrontFace.Clockwise,
-            Shader = shaderLibrary.Get("khronos_vulkan_tutorial") ?? throw new InvalidOperationException("Shader not found!"),
+            Shader = shaderLibrary.Get("khronos_vulkan_vertex_buffer") ?? throw new InvalidOperationException("Shader not found!"),
+            PipelineLayout = new PipelineLayout(0, (2 + 3) * sizeof(float), VertexInputRate.Vertex,
+                                    new PipelineLayoutVertexAttribute(0, 0, Format.R32g32Sfloat, 0),  // POSITION
+                                    new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, 2 * sizeof(float))   // COLOR
+                            ),
             RenderPass = renderPass
         });
 
         var commandPool = commandPoolFactory.CreateCommandPool();
 
         var commandBuffer = commandPool.AllocateCommandBuffer();
+
+        var vertexBuffer = vertexBufferFactory.CreateVertexBuffer();
+        vertexBuffer.SetData();
 
         //testRenderer.Initialize();
 
@@ -75,6 +82,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
             commandBuffer.BindPipeline(pipeline);
 
+            commandBuffer.BindBuffer(vertexBuffer);
+
             commandBuffer.Draw();
 
             commandBuffer.EndRenderPass();
@@ -94,6 +103,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
         //testRenderer.Cleanup();
 
         commandPool.FreeCommandBuffer(commandBuffer);
+
+        vertexBuffer.Cleanup();
 
         commandPool.Cleanup();
 

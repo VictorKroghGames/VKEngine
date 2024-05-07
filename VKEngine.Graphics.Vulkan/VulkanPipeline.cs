@@ -46,6 +46,33 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
             pipelineShaderStageCreateInfo[i].pName = Strings.main;
         }
 
+        var vertexInputBindingDescription = new VkVertexInputBindingDescription
+        {
+            binding = specification.PipelineLayout.binding,
+            stride = specification.PipelineLayout.stride,
+            inputRate = (VkVertexInputRate)specification.PipelineLayout.inputRate
+        };
+
+        var vertexInputAttributeDescriptions = specification.PipelineLayout.vertexAttributes.Select(x => new VkVertexInputAttributeDescription
+        {
+            binding = x.binding,
+            location = x.location,
+            format = (VkFormat)x.format,
+            offset = x.offset
+        }).ToArray();
+
+        //var vertexInputAttributeDescriptions = stackalloc VkVertexInputAttributeDescription[specification.PipelineLayout.vertexAttributes.Length];
+        //for (int i = 0; i < specification.PipelineLayout.vertexAttributes.Length; i++)
+        //{
+        //    vertexInputAttributeDescriptions[i] = new VkVertexInputAttributeDescription
+        //    {
+        //        binding = specification.PipelineLayout.vertexAttributes[i].binding,
+        //        location = specification.PipelineLayout.vertexAttributes[i].location,
+        //        format = (VkFormat)specification.PipelineLayout.vertexAttributes[i].format,
+        //        offset = specification.PipelineLayout.vertexAttributes[i].offset
+        //    };
+        //}
+
         // DYNAMIC STATE
         const int dynamicStateCount = 2;
         var dynamicStates = stackalloc VkDynamicState[dynamicStateCount]
@@ -60,10 +87,14 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
 
         // VERTEX INPUT
         var pipelineVertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.New();
-        pipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = 0;
-        pipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = null;
-        pipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
-        pipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions = null;
+        pipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
+        pipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = &vertexInputBindingDescription;
+
+        fixed (VkVertexInputAttributeDescription* pVertexInputAttributeDescriptions = &vertexInputAttributeDescriptions[0])
+        {
+            pipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = (uint)specification.PipelineLayout.vertexAttributes.Length;
+            pipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions = pVertexInputAttributeDescriptions;
+        }
 
         // INPUT ASSEMBLY
         var pipelineInputAssemblyStateCreateInfo = VkPipelineInputAssemblyStateCreateInfo.New();
@@ -105,7 +136,7 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
         pipelineRasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
         pipelineRasterizationStateCreateInfo.depthBiasClamp = 0.0f;
         pipelineRasterizationStateCreateInfo.depthBiasSlopeFactor = 0.0f;
-        
+
         // MULTISAMPLING
         var pipelineMultisampleStateCreateInfo = VkPipelineMultisampleStateCreateInfo.New();
         pipelineMultisampleStateCreateInfo.sampleShadingEnable = false;
