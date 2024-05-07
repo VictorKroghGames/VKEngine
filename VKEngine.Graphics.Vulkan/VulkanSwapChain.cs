@@ -1,12 +1,11 @@
-﻿using SixLabors.ImageSharp.Metadata;
-using VKEngine.Configuration;
+﻿using VKEngine.Configuration;
 using VKEngine.Graphics.Vulkan.Native;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWindow window, IGraphicsContext graphicsContext, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice) : ISwapChain
+internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWindow window, IGraphicsContext graphicsContext, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice) : ISwapChain
 {
     internal VkSurfaceKHR surface = VkSurfaceKHR.Null;
     internal VkSwapchainKHR swapchain = VkSwapchainKHR.Null;
