@@ -68,30 +68,5 @@ internal sealed class VulkanVertexBuffer(IVulkanPhysicalDevice physicalDevice, I
         Unsafe.CopyBlock(mappedMemory, gh.AddrOfPinnedObject().ToPointer(), (uint)size);
         gh.Free();
         vkUnmapMemory(logicalDevice.Device, bufferMemory);
-
-        //{
-        //    float* vertices = (float*)memory;
-
-        //    // Vertex 1
-        //    vertices[0] = 0.0f;
-        //    vertices[1] = -0.5f;
-        //    vertices[2] = 1.0f;
-        //    vertices[3] = 1.0f;
-        //    vertices[4] = 1.0f;
-
-        //    // Vertex 2
-        //    vertices[5] = 0.5f;
-        //    vertices[6] = 0.5f;
-        //    vertices[7] = 0.0f;
-        //    vertices[8] = 1.0f;
-        //    vertices[9] = 0.0f;
-
-        //    // Vertex 3
-        //    vertices[10] = -0.5f;
-        //    vertices[11] = 0.5f;
-        //    vertices[12] = 0.0f;
-        //    vertices[13] = 0.0f;
-        //    vertices[14] = 1.0f;
-        //}
     }
 }
