@@ -6,7 +6,7 @@ using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, /*ITestRenderer testRenderer, */IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandBufferAllocator commandBufferAllocator, IBufferFactory bufferFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandBufferAllocator commandBufferAllocator, IBufferFactory bufferFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -60,18 +60,23 @@ internal sealed class SandboxApplication(IWindow window, IInput input, /*ITestRe
             Shader = shaderLibrary.Get("khronos_vulkan_vertex_buffer") ?? throw new InvalidOperationException("Shader not found!"),
             PipelineLayout = new PipelineLayout(0, (2 + 3) * sizeof(float), VertexInputRate.Vertex,
                                     new PipelineLayoutVertexAttribute(0, 0, Format.R32g32Sfloat, 0),  // POSITION
-                                    new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)System.Runtime.CompilerServices.Unsafe.SizeOf<Vector2>())   // COLOR
+                                    new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)Unsafe.SizeOf<Vector2>())   // COLOR
                             ),
             RenderPass = renderPass
         });
 
-        var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(3 * Unsafe.SizeOf<Vertex>()), BufferMemoryPropertyFlags.HostVisible | BufferMemoryPropertyFlags.HostCoherent);
+        var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(4 * Unsafe.SizeOf<Vertex>()), BufferMemoryPropertyFlags.HostVisible | BufferMemoryPropertyFlags.HostCoherent);
 
         vertexBuffer.SetData([
-            new Vertex(new Vector2(0.0f, -0.5f), new Vector3(1.0f, 0.0f, 0.0f)),
-            new Vertex(new Vector2(0.5f, 0.5f), new Vector3(0.0f, 1.0f, 0.0f)),
-            new Vertex(new Vector2(-0.5f, 0.5f), new Vector3(0.0f, 0.0f, 1.0f)),
+            new Vertex(new Vector2(-0.5f, -0.5f), new Vector3(1.0f, 0.0f, 0.0f)),
+            new Vertex(new Vector2( 0.5f, -0.5f), new Vector3(0.0f, 1.0f, 0.0f)),
+            new Vertex(new Vector2( 0.5f,  0.5f), new Vector3(0.0f, 0.0f, 1.0f)),
+            new Vertex(new Vector2(-0.5f,  0.5f), new Vector3(1.0f, 1.0f, 1.0f)),
         ]);
+
+        var indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(6, BufferMemoryPropertyFlags.HostVisible | BufferMemoryPropertyFlags.HostCoherent);
+
+        indexBuffer.SetData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
         //testRenderer.Initialize();
 
@@ -95,9 +100,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, /*ITestRe
 
             commandBuffer.BindPipeline(pipeline);
 
-            commandBuffer.BindBuffer(vertexBuffer);
+            commandBuffer.BindVertexBuffer(vertexBuffer);
 
-            commandBuffer.Draw();
+            commandBuffer.BindIndexBuffer(indexBuffer);
+
+            commandBuffer.DrawIndex(6);
 
             commandBuffer.EndRenderPass();
 
@@ -117,6 +124,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, /*ITestRe
 
         commandBufferAllocator.Cleanup();
 
+        indexBuffer.Cleanup();
         vertexBuffer.Cleanup();
 
         pipeline.Cleanup();
