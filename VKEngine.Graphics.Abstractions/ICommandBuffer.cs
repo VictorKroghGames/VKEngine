@@ -13,6 +13,5 @@ public interface ICommandBuffer
 
     void BindPipeline(IPipeline pipeline);
     void BindBuffer(IBuffer buffer);
-    void BindBuffer(IVertexBuffer vertexBuffer);
     void Draw();
 }
