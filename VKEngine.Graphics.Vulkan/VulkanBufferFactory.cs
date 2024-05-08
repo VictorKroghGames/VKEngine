@@ -1,4 +1,6 @@
-﻿using VKEngine.Graphics.Enumerations;
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
+using VKEngine.Graphics.Enumerations;
 
 namespace VKEngine.Graphics.Vulkan;
 
@@ -16,9 +18,11 @@ internal sealed class VulkanBufferFactory(IVulkanPhysicalDevice physicalDevice, 
         return CreateBuffer(bufferSize, BufferUsageFlags.VertexBuffer, bufferMemoryPropertyFlags);
     }
 
-    public IBuffer CreateIndexBuffer()
+    public IBuffer CreateIndexBuffer<T>(uint indexCount, BufferMemoryPropertyFlags bufferMemoryPropertyFlags) where T : INumber<T>
     {
-        throw new NotImplementedException();
+        var bufferSize = (ulong)(indexCount * Unsafe.SizeOf<T>());
+
+        return CreateBuffer(bufferSize, BufferUsageFlags.IndexBuffer, bufferMemoryPropertyFlags);
     }
 
     public IBuffer CreateStagingBuffer()
