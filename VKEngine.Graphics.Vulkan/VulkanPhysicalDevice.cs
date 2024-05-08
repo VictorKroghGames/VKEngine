@@ -20,6 +20,7 @@ public interface IVulkanPhysicalDevice
     void Cleanup();
 
     bool IsExtensionSupported(string extensionName);
+    uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags memoryPropertyFlags);
 }
 
 internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
@@ -159,5 +160,19 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
         }
 
         return false;
+    }
+
+    public unsafe uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags memoryPropertyFlags)
+    {
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, out var memoryProperties);
+        for (uint i = 0; i < memoryProperties.memoryTypeCount; i++)
+        {
+            if ((typeFilter & ((int)1U << (int)i)) != 0 && (memoryProperties.GetMemoryType(i).propertyFlags & memoryPropertyFlags) == memoryPropertyFlags)
+            {
+                return (uint)i;
+            }
+        }
+
+        throw new ApplicationException("failed to find suitable memory type!");
     }
 }
