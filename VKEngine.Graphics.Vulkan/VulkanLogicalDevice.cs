@@ -10,6 +10,7 @@ public interface IVulkanLogicalDevice
 
     VkDevice Device { get; }
     VkQueue GraphicsQueue { get; }
+    VkQueue TransferQueue { get; }
     VkQueue PresentQueue { get; }
 
     void Initialize(IVulkanPhysicalDevice physicalDevice);
@@ -21,6 +22,7 @@ internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
 {
     private VkDevice device;
     private VkQueue graphicsQueue;
+    private VkQueue transferQueue;
     private VkQueue presentQueue;
     private bool isInitialized = false;
 
@@ -28,6 +30,7 @@ internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
 
     public VkDevice Device => device;
     public VkQueue GraphicsQueue => graphicsQueue;
+    public VkQueue TransferQueue => transferQueue;
     public VkQueue PresentQueue => presentQueue;
 
     public void Initialize(IVulkanPhysicalDevice physicalDevice)
@@ -41,6 +44,7 @@ internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
         CreateLogicalDeviceUnsafe(physicalDevice, deviceFeatures);
 
         vkGetDeviceQueue(device, physicalDevice.QueueFamilyIndices.Graphics, 0, out graphicsQueue);
+        vkGetDeviceQueue(device, physicalDevice.QueueFamilyIndices.Transfer, 0, out transferQueue);
         vkGetDeviceQueue(device, physicalDevice.QueueFamilyIndices.Present, 0, out presentQueue);
 
         isInitialized = true;
@@ -63,6 +67,7 @@ internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
         var familyIndices = new HashSet<uint>()
         {
             physicalDevice.QueueFamilyIndices.Graphics,
+            physicalDevice.QueueFamilyIndices.Transfer,
             physicalDevice.QueueFamilyIndices.Present
         };
 
@@ -72,7 +77,7 @@ internal sealed class VulkanLogicalDevice : IVulkanLogicalDevice
         foreach (uint index in familyIndices)
         {
             VkDeviceQueueCreateInfo queueCreateInfo = VkDeviceQueueCreateInfo.New();
-            queueCreateInfo.queueFamilyIndex = physicalDevice.QueueFamilyIndices.Graphics;
+            queueCreateInfo.queueFamilyIndex = index;
             queueCreateInfo.queueCount = 1;
             float priority = 1f;
             queueCreateInfo.pQueuePriorities = &priority;
