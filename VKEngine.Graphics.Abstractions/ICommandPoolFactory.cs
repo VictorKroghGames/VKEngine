@@ -3,5 +3,5 @@
 public interface ICommandPoolFactory
 {
     ICommandPool CreateCommandPool();
-    ICommandPool CreateCommandPool(uint queueIndex);
+    ICommandPool CreateCommandPool(uint queueFamilyIndex);
 }

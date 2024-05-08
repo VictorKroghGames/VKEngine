@@ -3,7 +3,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanCommandPool(IVulkanLogicalDevice logicalDevice, uint queueIndex) : ICommandPool
+internal sealed class VulkanCommandPool(IVulkanLogicalDevice logicalDevice, uint queueFamilyIndex) : ICommandPool
 {
     internal VkCommandPool commandPool;
 
@@ -11,7 +11,7 @@ internal sealed class VulkanCommandPool(IVulkanLogicalDevice logicalDevice, uint
     {
         var commandPoolCreateInfo = VkCommandPoolCreateInfo.New();
         commandPoolCreateInfo.flags = VkCommandPoolCreateFlags.ResetCommandBuffer;
-        commandPoolCreateInfo.queueFamilyIndex = queueIndex;
+        commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
 
         if(vkCreateCommandPool(logicalDevice.Device, &commandPoolCreateInfo, null, out commandPool) is not VkResult.Success)
         {

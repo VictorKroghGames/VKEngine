@@ -7,9 +7,9 @@ internal sealed class VulkanCommandPoolFactory(IVulkanPhysicalDevice physicalDev
         return CreateCommandPool(physicalDevice.QueueFamilyIndices.Graphics);
     }
 
-    public ICommandPool CreateCommandPool(uint queueIndex)
+    public ICommandPool CreateCommandPool(uint queueFamilyIndex)
     {
-        var commandPool = new VulkanCommandPool(logicalDevice, queueIndex);
+        var commandPool = new VulkanCommandPool(logicalDevice, queueFamilyIndex);
         commandPool.Initialize();
         return commandPool;
     }
