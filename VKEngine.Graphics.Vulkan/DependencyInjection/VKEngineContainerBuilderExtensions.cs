@@ -13,10 +13,13 @@ public static class VKEngineContainerBuilderExtensions
         containerBuilder.Services.AddSingleton<IVulkanLogicalDevice, VulkanLogicalDevice>();
         containerBuilder.Services.AddSingleton<ISwapChain, VulkanSwapChain>();
 
+        containerBuilder.Services.AddSingleton<ICommandPoolFactory, VulkanCommandPoolFactory>();
+        containerBuilder.Services.AddSingleton<ICommandBufferAllocator, VulkanCommandBufferAllocator>();
+
         containerBuilder.Services.AddSingleton<IShaderFactory, VulkanShaderFactory>();
         containerBuilder.Services.AddSingleton<IRenderPassFactory, VulkanRenderPassFactory>();
         containerBuilder.Services.AddSingleton<IPipelineFactory, VulkanPipelineFactory>();
-        containerBuilder.Services.AddSingleton<ICommandPoolFactory, VulkanCommandPoolFactory>();
+        containerBuilder.Services.AddSingleton<IBufferFactory, VulkanBufferFactory>();
 
         containerBuilder.Services.AddSingleton<ITestRenderer, VulkanTutorial>();
 

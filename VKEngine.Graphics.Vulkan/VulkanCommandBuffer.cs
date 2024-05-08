@@ -1,11 +1,13 @@
-﻿using Vulkan;
+﻿using System;
+using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : ICommandBuffer
+internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuffer commandBuffer, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : ICommandBuffer
 {
-    internal VkCommandBuffer CommandBuffer => commandBuffer;
+    internal ICommandPool commandPool = commandPool;
+    internal VkCommandBuffer commandBuffer = commandBuffer;
 
     public void Cleanup()
     {
@@ -69,6 +71,28 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
         }
     }
 
+    internal unsafe void SubmitUnsafe(VkQueue queue)
+    {
+        if (swapChain is not VulkanSwapChain vulkanSwapChain)
+        {
+            throw new InvalidOperationException("Invalid swap chain type!");
+        }
+
+        var submitInfo = VkSubmitInfo.New();
+        submitInfo.commandBufferCount = 1;
+        fixed (VkCommandBuffer* commandBufferPtr = &commandBuffer)
+        {
+            submitInfo.pCommandBuffers = commandBufferPtr;
+        }
+
+        if (vkQueueSubmit(queue, 1, &submitInfo, VkFence.Null) is not VkResult.Success)
+        {
+            throw new InvalidOperationException("Failed to submit command buffer!");
+        }
+
+        vkQueueWaitIdle(queue);
+    }
+
     public unsafe void BeginRenderPass(IRenderPass renderPass)
     {
         if (renderPass is not VulkanRenderPass vulkanRenderPass)
@@ -115,7 +139,42 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
         vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipeline);
     }
 
+    public unsafe void BindVertexBuffer(IBuffer buffer)
+    {
+        if (buffer is not VulkanBuffer vulkanBuffer)
+        {
+            throw new InvalidOperationException("Invalid buffer type!");
+        }
+
+        var offset = 0ul;
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, ref vulkanBuffer.buffer, &offset);
+    }
+
+    public void BindIndexBuffer(IBuffer buffer)
+    {
+        if (buffer is not VulkanBuffer vulkanBuffer)
+        {
+            throw new InvalidOperationException("Invalid buffer type!");
+        }
+
+        vkCmdBindIndexBuffer(commandBuffer, vulkanBuffer.buffer, 0, VkIndexType.Uint16);
+    }
+
     public unsafe void Draw()
+    {
+        SetViewportAndScissor();
+
+        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    }
+
+    public void DrawIndex(uint indexCount)
+    {
+        SetViewportAndScissor();
+
+        vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
+    }
+
+    private unsafe void SetViewportAndScissor()
     {
         if (swapChain is not VulkanSwapChain vulkanSwapChain)
         {
@@ -144,7 +203,5 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
             extent = vulkanSwapChain.extent
         };
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
     }
 }

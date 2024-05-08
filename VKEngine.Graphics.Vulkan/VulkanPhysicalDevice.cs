@@ -6,6 +6,7 @@ namespace VKEngine.Graphics.Vulkan;
 public struct QueueFamilyIndex
 {
     public uint Graphics { get; set; }
+    public uint Transfer { get; set; }
     public uint Present { get; set; }
 }
 
@@ -20,6 +21,7 @@ public interface IVulkanPhysicalDevice
     void Cleanup();
 
     bool IsExtensionSupported(string extensionName);
+    uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags memoryPropertyFlags);
 }
 
 internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
@@ -129,6 +131,10 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
             {
                 queueFamilyIndices.Graphics = i;
             }
+            else if (queueFamily.queueFlags.HasFlag(VkQueueFlags.Transfer))
+            {
+                queueFamilyIndices.Transfer = i;
+            }
         }
 
         queueFamilyIndices.Present = queueFamilyIndices.Graphics;
@@ -147,7 +153,7 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
             var extensionProperty = extensionProperties[i];
 
             var str = System.Runtime.InteropServices.Marshal.PtrToStringUTF8((IntPtr)extensionProperty.extensionName);
-            if(string.IsNullOrWhiteSpace(str))
+            if (string.IsNullOrWhiteSpace(str))
             {
                 continue;
             }
@@ -159,5 +165,19 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
         }
 
         return false;
+    }
+
+    public unsafe uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags memoryPropertyFlags)
+    {
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, out var memoryProperties);
+        for (uint i = 0; i < memoryProperties.memoryTypeCount; i++)
+        {
+            if ((typeFilter & ((int)1U << (int)i)) != 0 && (memoryProperties.GetMemoryType(i).propertyFlags & memoryPropertyFlags) == memoryPropertyFlags)
+            {
+                return (uint)i;
+            }
+        }
+
+        throw new ApplicationException("failed to find suitable memory type!");
     }
 }

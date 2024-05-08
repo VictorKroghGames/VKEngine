@@ -1,12 +1,11 @@
-﻿using SixLabors.ImageSharp.Metadata;
-using VKEngine.Configuration;
+﻿using VKEngine.Configuration;
 using VKEngine.Graphics.Vulkan.Native;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWindow window, IGraphicsContext graphicsContext, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice) : ISwapChain
+internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWindow window, IGraphicsContext graphicsContext, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice) : ISwapChain
 {
     internal VkSurfaceKHR surface = VkSurfaceKHR.Null;
     internal VkSwapchainKHR swapchain = VkSwapchainKHR.Null;
@@ -26,6 +25,7 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
     private uint imageCount = 0;
     internal uint imageIndex = 0;
 
+    private VulkanRenderPass vulkanRenderPass;
     private VkSurfaceFormatKHR[] supportedSurfaceFormats = [];
     private VkPresentModeKHR[] supportedPresentModes = [];
 
@@ -40,14 +40,30 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
         {
             throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanRenderPass!");
         }
+        this.vulkanRenderPass = vulkanRenderPass;
 
         CreateSurface(vulkanGraphicsContext);
+
+        QuerySwapChainSupport(physicalDevice);
+
+        var swapChainAdequate = supportedSurfaceFormats.Length != 0 && supportedPresentModes.Length != 0;
+        if (swapChainAdequate is false)
+        {
+            throw new ApplicationException("Swap chain is not adequate!");
+        }
+
+        surfaceFormat = ChooseSwapSurfaceFormat();
+        presentMode = ChooseSwapPresentMode();
+        extent = ChooseSwapExtent();
+
         CreateSwapChain(vulkanRenderPass);
+
+        CreateSynchronizationObjects(logicalDevice);
     }
 
     public void Cleanup()
     {
-        vkDeviceWaitIdle(logicalDevice.Device);
+        CleanupSwapChain();
 
         vkDestroySemaphore(logicalDevice.Device, imageAvailableSemaphore, nint.Zero);
         imageAvailableSemaphore = VkSemaphore.Null;
@@ -57,6 +73,18 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
 
         vkDestroyFence(logicalDevice.Device, inFlightFence, nint.Zero);
         inFlightFence = VkFence.Null;
+
+        if (graphicsContext is not IVulkanGraphicsContext vulkanGraphicsContext)
+        {
+            throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanGraphicsContext!");
+        }
+
+        vkDestroySurfaceKHR(vulkanGraphicsContext.Instance.Handle, surface, nint.Zero);
+    }
+
+    private void CleanupSwapChain()
+    {
+        vkDeviceWaitIdle(logicalDevice.Device);
 
         for (var i = 0; i < framebuffers.Length; i++)
         {
@@ -76,13 +104,6 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
             vkDestroySwapchainKHR(logicalDevice.Device, swapchain, nint.Zero);
             swapchain = VkSwapchainKHR.Null;
         }
-
-        if (graphicsContext is not IVulkanGraphicsContext vulkanGraphicsContext)
-        {
-            throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanGraphicsContext!");
-        }
-
-        vkDestroySurfaceKHR(vulkanGraphicsContext.Instance.Handle, surface, nint.Zero);
     }
 
     private void CreateSurface(IVulkanGraphicsContext vulkanGraphicsContext)
@@ -98,18 +119,6 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
 
     private unsafe void CreateSwapChain(VulkanRenderPass renderPass)
     {
-        QuerySwapChainSupport(physicalDevice);
-
-        var swapChainAdequate = supportedSurfaceFormats.Length != 0 && supportedPresentModes.Length != 0;
-        if (swapChainAdequate is false)
-        {
-            throw new ApplicationException("Swap chain is not adequate!");
-        }
-
-        surfaceFormat = ChooseSwapSurfaceFormat();
-        presentMode = ChooseSwapPresentMode();
-        extent = ChooseSwapExtent();
-
         imageCount = surfaceCapabilities.minImageCount + 1;
         if (surfaceCapabilities.maxImageCount > 0 && imageCount > surfaceCapabilities.maxImageCount)
         {
@@ -148,7 +157,8 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
         swapchainCreateInfo.clipped = true;
         swapchainCreateInfo.oldSwapchain = VkSwapchainKHR.Null;
 
-        if (vkCreateSwapchainKHR(logicalDevice.Device, &swapchainCreateInfo, null, out swapchain) is not VkResult.Success)
+        var result = vkCreateSwapchainKHR(logicalDevice.Device, &swapchainCreateInfo, null, out swapchain);
+        if (result is not VkResult.Success)
         {
             throw new ApplicationException("Failed to create swap chain!");
         }
@@ -208,7 +218,10 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
                 throw new ApplicationException("Failed to create framebuffer!");
             }
         }
+    }
 
+    private unsafe void CreateSynchronizationObjects(IVulkanLogicalDevice logicalDevice)
+    {
         var semaphoreCreateInfo = VkSemaphoreCreateInfo.New();
         if (vkCreateSemaphore(logicalDevice.Device, &semaphoreCreateInfo, null, out imageAvailableSemaphore) is not VkResult.Success)
         {
@@ -349,12 +362,26 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
     public unsafe void AquireNextImage()
     {
         vkWaitForFences(logicalDevice.Device, 1, ref inFlightFence, true, ulong.MaxValue);
-        vkResetFences(logicalDevice.Device, 1, ref inFlightFence);
 
-        if (vkAcquireNextImageKHR(logicalDevice.Device, swapchain, ulong.MaxValue, imageAvailableSemaphore, VkFence.Null, ref imageIndex) is not VkResult.Success)
+        var result = vkAcquireNextImageKHR(logicalDevice.Device, swapchain, ulong.MaxValue, imageAvailableSemaphore, VkFence.Null, ref imageIndex);
+        if (result is VkResult.ErrorOutOfDateKHR || result is VkResult.SuboptimalKHR)
+        {
+            CleanupSwapChain();
+            CreateSwapChain(vulkanRenderPass);
+            return;
+        }
+
+        if (result is not VkResult.Success)
         {
             throw new ApplicationException("Failed to acquire next image!");
         }
+
+        //if (vkAcquireNextImageKHR(logicalDevice.Device, swapchain, ulong.MaxValue, imageAvailableSemaphore, VkFence.Null, ref imageIndex) is not VkResult.Success)
+        //{
+        //    throw new ApplicationException("Failed to acquire next image!");
+        //}
+
+        vkResetFences(logicalDevice.Device, 1, ref inFlightFence);
     }
 
     public unsafe void Present()
@@ -376,7 +403,15 @@ internal class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWi
             presentInfo.pImageIndices = pImageIndex;
         }
 
-        if (vkQueuePresentKHR(logicalDevice.PresentQueue, &presentInfo) is not VkResult.Success)
+        var result = vkQueuePresentKHR(logicalDevice.PresentQueue, &presentInfo);
+        if (result is VkResult.ErrorOutOfDateKHR || result is VkResult.SuboptimalKHR)
+        {
+            CleanupSwapChain();
+            CreateSwapChain(vulkanRenderPass);
+            return;
+        }
+
+        if (result is not VkResult.Success)
         {
             throw new ApplicationException("Failed to present image!");
         }
