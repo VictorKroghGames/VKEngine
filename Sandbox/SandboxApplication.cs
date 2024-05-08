@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Numerics;
 using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
@@ -9,6 +10,12 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
     private static ConcurrentQueue<Action> actionQueue = new();
 
     private bool isRunning = true;
+
+    internal readonly struct Vertex(Vector2 position, Vector3 color)
+    {
+        public readonly Vector2 Position = position;
+        public readonly Vector3 Color = color;
+    }
 
     public void Dispose()
     {
@@ -48,7 +55,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
             Shader = shaderLibrary.Get("khronos_vulkan_vertex_buffer") ?? throw new InvalidOperationException("Shader not found!"),
             PipelineLayout = new PipelineLayout(0, (2 + 3) * sizeof(float), VertexInputRate.Vertex,
                                     new PipelineLayoutVertexAttribute(0, 0, Format.R32g32Sfloat, 0),  // POSITION
-                                    new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, 2 * sizeof(float))   // COLOR
+                                    new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)System.Runtime.CompilerServices.Unsafe.SizeOf<Vector2>())   // COLOR
                             ),
             RenderPass = renderPass
         });
@@ -58,7 +65,12 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
         var commandBuffer = commandPool.AllocateCommandBuffer();
 
         var vertexBuffer = vertexBufferFactory.CreateVertexBuffer();
-        vertexBuffer.SetData();
+
+        vertexBuffer.SetData([
+            new Vertex(new Vector2(0.0f, -0.5f), new Vector3(1.0f, 0.0f, 0.0f)),
+            new Vertex(new Vector2(0.5f, 0.5f), new Vector3(0.0f, 1.0f, 0.0f)),
+            new Vertex(new Vector2(-0.5f, 0.5f), new Vector3(0.0f, 0.0f, 1.0f)),
+        ]);
 
         //testRenderer.Initialize();
 

@@ -10,5 +10,5 @@ public interface IVertexBuffer
     void Initialize();
     void Cleanup();
 
-    void SetData();
+    void SetData<T>(T[] data);
 }

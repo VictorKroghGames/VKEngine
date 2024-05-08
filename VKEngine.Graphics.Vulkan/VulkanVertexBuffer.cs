@@ -1,4 +1,6 @@
-﻿using Vulkan;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
@@ -50,36 +52,46 @@ internal sealed class VulkanVertexBuffer(IVulkanPhysicalDevice physicalDevice, I
         vkFreeMemory(logicalDevice.Device, bufferMemory, IntPtr.Zero);
     }
 
-    public unsafe void SetData()
+    public unsafe void SetData<T>(T[] data)
     {
-        var b = vkBindBufferMemory(logicalDevice.Device, buffer, bufferMemory, 0);
-
-        void* data = null;
-        var r = vkMapMemory(logicalDevice.Device, bufferMemory, 0, bufferSize, 0, &data);
+        var size = (ulong)(data.Length * Unsafe.SizeOf<T>());
+        if (size > bufferSize)
         {
-            float* vertices = (float*)data;
-
-            // Vertex 1
-            vertices[0] = 0.0f;
-            vertices[1] = -0.5f;
-            vertices[2] = 1.0f;
-            vertices[3] = 1.0f;
-            vertices[4] = 1.0f;
-
-            // Vertex 2
-            vertices[5] = 0.5f;
-            vertices[6] = 0.5f;
-            vertices[7] = 0.0f;
-            vertices[8] = 1.0f;
-            vertices[9] = 0.0f;
-
-            // Vertex 3
-            vertices[10] = -0.5f;
-            vertices[11] = 0.5f;
-            vertices[12] = 0.0f;
-            vertices[13] = 0.0f;
-            vertices[14] = 1.0f;
+            throw new InvalidOperationException("Data size exceeds buffer size!");
         }
+
+        vkBindBufferMemory(logicalDevice.Device, buffer, bufferMemory, 0);
+
+        void* mappedMemory;
+        vkMapMemory(logicalDevice.Device, bufferMemory, 0, size, 0, &mappedMemory);
+        GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
+        Unsafe.CopyBlock(mappedMemory, gh.AddrOfPinnedObject().ToPointer(), (uint)size);
+        gh.Free();
         vkUnmapMemory(logicalDevice.Device, bufferMemory);
+
+        //{
+        //    float* vertices = (float*)memory;
+
+        //    // Vertex 1
+        //    vertices[0] = 0.0f;
+        //    vertices[1] = -0.5f;
+        //    vertices[2] = 1.0f;
+        //    vertices[3] = 1.0f;
+        //    vertices[4] = 1.0f;
+
+        //    // Vertex 2
+        //    vertices[5] = 0.5f;
+        //    vertices[6] = 0.5f;
+        //    vertices[7] = 0.0f;
+        //    vertices[8] = 1.0f;
+        //    vertices[9] = 0.0f;
+
+        //    // Vertex 3
+        //    vertices[10] = -0.5f;
+        //    vertices[11] = 0.5f;
+        //    vertices[12] = 0.0f;
+        //    vertices[13] = 0.0f;
+        //    vertices[14] = 1.0f;
+        //}
     }
 }
