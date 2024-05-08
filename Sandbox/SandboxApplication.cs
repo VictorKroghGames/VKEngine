@@ -1,11 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, /*ITestRenderer testRenderer, */IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandBufferAllocator commandBufferAllocator, IVertexBufferFactory vertexBufferFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, /*ITestRenderer testRenderer, */IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandBufferAllocator commandBufferAllocator, IBufferFactory bufferFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -64,7 +65,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, /*ITestRe
             RenderPass = renderPass
         });
 
-        var vertexBuffer = vertexBufferFactory.CreateVertexBuffer();
+        var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(3 * Unsafe.SizeOf<Vertex>()), BufferMemoryPropertyFlags.HostVisible | BufferMemoryPropertyFlags.HostCoherent);
 
         vertexBuffer.SetData([
             new Vertex(new Vector2(0.0f, -0.5f), new Vector3(1.0f, 0.0f, 0.0f)),
