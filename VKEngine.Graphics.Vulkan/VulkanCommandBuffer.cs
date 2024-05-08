@@ -116,9 +116,9 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipeline);
     }
 
-    public unsafe void BindBuffer(IBuffer buffer)
+    public unsafe void BindVertexBuffer(IBuffer buffer)
     {
-        if(buffer is not VulkanBuffer vulkanBuffer)
+        if (buffer is not VulkanBuffer vulkanBuffer)
         {
             throw new InvalidOperationException("Invalid buffer type!");
         }
@@ -127,7 +127,31 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, ref vulkanBuffer.buffer, &offset);
     }
 
+    public void BindIndexBuffer(IBuffer buffer)
+    {
+        if (buffer is not VulkanBuffer vulkanBuffer)
+        {
+            throw new InvalidOperationException("Invalid buffer type!");
+        }
+
+        vkCmdBindIndexBuffer(commandBuffer, vulkanBuffer.buffer, 0, VkIndexType.Uint16);
+    }
+
     public unsafe void Draw()
+    {
+        SetViewportAndScissor();
+
+        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    }
+
+    public void DrawIndex(uint indexCount)
+    {
+        SetViewportAndScissor();
+
+        vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
+    }
+
+    private unsafe void SetViewportAndScissor()
     {
         if (swapChain is not VulkanSwapChain vulkanSwapChain)
         {
@@ -156,7 +180,5 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
             extent = vulkanSwapChain.extent
         };
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
     }
 }
