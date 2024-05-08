@@ -24,9 +24,4 @@ internal sealed class VulkanBufferFactory(IVulkanPhysicalDevice physicalDevice, 
 
         return CreateBuffer(bufferSize, BufferUsageFlags.IndexBuffer, bufferMemoryPropertyFlags);
     }
-
-    public IBuffer CreateStagingBuffer()
-    {
-        throw new NotImplementedException();
-    }
 }
