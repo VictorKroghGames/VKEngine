@@ -4,11 +4,11 @@ using VKEngine.Graphics.Enumerations;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanBufferFactory(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice) : IBufferFactory
+internal sealed class VulkanBufferFactory(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator) : IBufferFactory
 {
     public IBuffer CreateBuffer(ulong bufferSize, BufferUsageFlags usage, BufferMemoryPropertyFlags bufferMemoryPropertyFlags)
     {
-        var buffer = new VulkanBuffer(physicalDevice, logicalDevice, bufferSize, usage, bufferMemoryPropertyFlags);
+        var buffer = new VulkanBuffer(physicalDevice, logicalDevice, commandPoolFactory, commandBufferAllocator, bufferSize, usage, bufferMemoryPropertyFlags);
         buffer.Initialize();
         return buffer;
     }

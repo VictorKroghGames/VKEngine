@@ -1,4 +1,5 @@
-﻿using Vulkan;
+﻿using System;
+using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
@@ -68,6 +69,28 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         {
             throw new InvalidOperationException("Failed to submit command buffer!");
         }
+    }
+
+    internal unsafe void SubmitUnsafe(VkQueue queue)
+    {
+        if (swapChain is not VulkanSwapChain vulkanSwapChain)
+        {
+            throw new InvalidOperationException("Invalid swap chain type!");
+        }
+
+        var submitInfo = VkSubmitInfo.New();
+        submitInfo.commandBufferCount = 1;
+        fixed (VkCommandBuffer* commandBufferPtr = &commandBuffer)
+        {
+            submitInfo.pCommandBuffers = commandBufferPtr;
+        }
+
+        if (vkQueueSubmit(queue, 1, &submitInfo, VkFence.Null) is not VkResult.Success)
+        {
+            throw new InvalidOperationException("Failed to submit command buffer!");
+        }
+
+        vkQueueWaitIdle(queue);
     }
 
     public unsafe void BeginRenderPass(IRenderPass renderPass)
