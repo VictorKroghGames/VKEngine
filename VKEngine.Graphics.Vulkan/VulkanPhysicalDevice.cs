@@ -6,6 +6,7 @@ namespace VKEngine.Graphics.Vulkan;
 public struct QueueFamilyIndex
 {
     public uint Graphics { get; set; }
+    public uint Transfer { get; set; }
     public uint Present { get; set; }
 }
 
@@ -130,6 +131,10 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
             {
                 queueFamilyIndices.Graphics = i;
             }
+            else if (queueFamily.queueFlags.HasFlag(VkQueueFlags.Transfer))
+            {
+                queueFamilyIndices.Transfer = i;
+            }
         }
 
         queueFamilyIndices.Present = queueFamilyIndices.Graphics;
@@ -148,7 +153,7 @@ internal class VulkanPhysicalDevice : IVulkanPhysicalDevice
             var extensionProperty = extensionProperties[i];
 
             var str = System.Runtime.InteropServices.Marshal.PtrToStringUTF8((IntPtr)extensionProperty.extensionName);
-            if(string.IsNullOrWhiteSpace(str))
+            if (string.IsNullOrWhiteSpace(str))
             {
                 continue;
             }

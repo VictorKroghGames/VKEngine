@@ -12,6 +12,9 @@ public interface ICommandBuffer
     void EndRenderPass();
 
     void BindPipeline(IPipeline pipeline);
-    void BindBuffer(IVertexBuffer vertexBuffer);
+    void BindVertexBuffer(IBuffer buffer);
+    void BindIndexBuffer(IBuffer buffer);
+
     void Draw();
+    void DrawIndex(uint indexCount);
 }

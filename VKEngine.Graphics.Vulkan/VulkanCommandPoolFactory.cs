@@ -4,7 +4,12 @@ internal sealed class VulkanCommandPoolFactory(IVulkanPhysicalDevice physicalDev
 {
     public ICommandPool CreateCommandPool()
     {
-        var commandPool = new VulkanCommandPool(physicalDevice, logicalDevice);
+        return CreateCommandPool(physicalDevice.QueueFamilyIndices.Graphics);
+    }
+
+    public ICommandPool CreateCommandPool(uint queueFamilyIndex)
+    {
+        var commandPool = new VulkanCommandPool(logicalDevice, queueFamilyIndex);
         commandPool.Initialize();
         return commandPool;
     }
