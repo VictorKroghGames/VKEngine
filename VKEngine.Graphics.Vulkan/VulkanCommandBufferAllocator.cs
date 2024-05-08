@@ -1,6 +1,9 @@
-﻿namespace VKEngine.Graphics.Vulkan;
+﻿using Vulkan;
+using static Vulkan.VulkanNative;
 
-internal sealed class VulkanCommandBufferAllocator(ICommandPoolFactory commandPoolFactory) : ICommandBufferAllocator
+namespace VKEngine.Graphics.Vulkan;
+
+internal sealed class VulkanCommandBufferAllocator(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, ICommandPoolFactory commandPoolFactory) : ICommandBufferAllocator
 {
     private ICommandPool defaultCommandPool = default!;
 
@@ -14,7 +17,7 @@ internal sealed class VulkanCommandBufferAllocator(ICommandPoolFactory commandPo
         defaultCommandPool.Cleanup();
     }
 
-    public ICommandBuffer AllocateCommandBuffer(ICommandPool? commandPool = null)
+    public unsafe ICommandBuffer AllocateCommandBuffer(ICommandPool? commandPool = null)
     {
         var desiredCommandPool = commandPool ?? defaultCommandPool;
         if (desiredCommandPool is not VulkanCommandPool vulkanCommandPool)
@@ -22,7 +25,17 @@ internal sealed class VulkanCommandBufferAllocator(ICommandPoolFactory commandPo
             throw new InvalidOperationException("Invalid command pool type!");
         }
 
-        return vulkanCommandPool.AllocateCommandBuffer();
+        var commandBufferAllocateInfo = VkCommandBufferAllocateInfo.New();
+        commandBufferAllocateInfo.commandPool = vulkanCommandPool.commandPool;
+        commandBufferAllocateInfo.level = VkCommandBufferLevel.Primary;
+        commandBufferAllocateInfo.commandBufferCount = 1;
+
+        if (vkAllocateCommandBuffers(logicalDevice.Device, &commandBufferAllocateInfo, out var commandBufferHandle) is not VkResult.Success)
+        {
+            throw new InvalidOperationException("Failed to allocate command buffer!");
+        }
+
+        return new VulkanCommandBuffer(commandBufferHandle, logicalDevice, swapChain);
     }
 
     public void FreeCommandBuffer(ICommandBuffer commandBuffer)
