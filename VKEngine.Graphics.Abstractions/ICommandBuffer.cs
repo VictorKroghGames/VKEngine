@@ -15,9 +15,3 @@ public interface ICommandBuffer
     void BindBuffer(IVertexBuffer vertexBuffer);
     void Draw();
 }
-
-public interface ICommandBufferAllocator
-{
-    ICommandBuffer AllocateCommandBuffer();
-    void FreeCommandBuffer(ICommandBuffer commandBuffer);
-}

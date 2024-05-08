@@ -3,9 +3,10 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : ICommandBuffer
+internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuffer commandBuffer, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : ICommandBuffer
 {
-    internal VkCommandBuffer CommandBuffer => commandBuffer;
+    internal ICommandPool commandPool = commandPool;
+    internal VkCommandBuffer commandBuffer = commandBuffer;
 
     public void Cleanup()
     {
@@ -117,7 +118,7 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
 
     public unsafe void BindBuffer(IVertexBuffer vertexBuffer)
     {
-        if(vertexBuffer is not VulkanVertexBuffer vulkanVertexBuffer)
+        if (vertexBuffer is not VulkanVertexBuffer vulkanVertexBuffer)
         {
             throw new InvalidOperationException("Invalid vertex buffer type!");
         }

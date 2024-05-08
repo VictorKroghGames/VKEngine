@@ -1,11 +1,6 @@
 ﻿namespace VKEngine.Graphics;
 
-public interface ICommandPoolFactory
-{
-    ICommandPool CreateCommandPool();
-}
-
-public interface ICommandPool : ICommandBufferAllocator
+public interface ICommandPool
 {
     void Cleanup();
 }
