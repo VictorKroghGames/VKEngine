@@ -3,19 +3,9 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanCommandPoolFactory(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : ICommandPoolFactory
-{
-    public ICommandPool CreateCommandPool()
-    {
-        var commandPool = new VulkanCommandPool(physicalDevice, logicalDevice, swapChain);
-        commandPool.Initialize();
-        return commandPool;
-    }
-}
-
 internal sealed class VulkanCommandPool(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : ICommandPool
 {
-    private VkCommandPool commandPool;
+    internal VkCommandPool commandPool;
 
     internal unsafe void Initialize()
     {
@@ -31,10 +21,12 @@ internal sealed class VulkanCommandPool(IVulkanPhysicalDevice physicalDevice, IV
 
     public void Cleanup()
     {
+        vkDeviceWaitIdle(logicalDevice.Device);
+
         vkDestroyCommandPool(logicalDevice.Device, commandPool, IntPtr.Zero);
     }
 
-    public unsafe ICommandBuffer AllocateCommandBuffer()
+    internal unsafe ICommandBuffer AllocateCommandBuffer()
     {
         var commandBufferAllocateInfo = VkCommandBufferAllocateInfo.New();
         commandBufferAllocateInfo.commandPool = commandPool;
@@ -49,7 +41,7 @@ internal sealed class VulkanCommandPool(IVulkanPhysicalDevice physicalDevice, IV
         return new VulkanCommandBuffer(commandBufferHandle, logicalDevice, swapChain);
     }
 
-    public unsafe void FreeCommandBuffer(ICommandBuffer commandBuffer)
+    internal unsafe void FreeCommandBuffer(ICommandBuffer commandBuffer)
     {
         vkDeviceWaitIdle(logicalDevice.Device);
 

@@ -5,7 +5,7 @@ using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, ITestRenderer testRenderer, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandPoolFactory commandPoolFactory, IVertexBufferFactory vertexBufferFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, /*ITestRenderer testRenderer, */IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandBufferAllocator commandBufferAllocator, IVertexBufferFactory vertexBufferFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -38,6 +38,10 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
         swapChain.Initialize(renderPass);
 
+        commandBufferAllocator.Initialize();
+
+        var commandBuffer = commandBufferAllocator.AllocateCommandBuffer();
+
         //shaderLibrary.Load("shader",
         //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),
         //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"), ShaderModuleType.Fragment)
@@ -59,10 +63,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
                             ),
             RenderPass = renderPass
         });
-
-        var commandPool = commandPoolFactory.CreateCommandPool();
-
-        var commandBuffer = commandPool.AllocateCommandBuffer();
 
         var vertexBuffer = vertexBufferFactory.CreateVertexBuffer();
 
@@ -114,11 +114,9 @@ internal sealed class SandboxApplication(IWindow window, IInput input, ITestRend
 
         //testRenderer.Cleanup();
 
-        commandPool.FreeCommandBuffer(commandBuffer);
+        commandBufferAllocator.Cleanup();
 
         vertexBuffer.Cleanup();
-
-        commandPool.Cleanup();
 
         pipeline.Cleanup();
 

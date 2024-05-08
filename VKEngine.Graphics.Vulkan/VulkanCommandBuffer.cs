@@ -117,7 +117,7 @@ internal sealed class VulkanCommandBuffer(VkCommandBuffer commandBuffer, IVulkan
 
     public unsafe void BindBuffer(IVertexBuffer vertexBuffer)
     {
-        if(vertexBuffer is not VulkanVertexBuffer vulkanVertexBuffer)
+        if (vertexBuffer is not VulkanVertexBuffer vulkanVertexBuffer)
         {
             throw new InvalidOperationException("Invalid vertex buffer type!");
         }
