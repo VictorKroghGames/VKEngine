@@ -5,6 +5,6 @@ public interface ICommandBufferAllocator
     void Initialize();
     void Cleanup();
 
-    ICommandBuffer AllocateCommandBuffer(ICommandPool? commandPool = default);
+    ICommandBuffer AllocateCommandBuffer(CommandBufferLevel commandBufferLevel = CommandBufferLevel.Primary, ICommandPool? commandPool = default);
     void FreeCommandBuffer(ICommandBuffer commandBuffer);
 }
