@@ -79,7 +79,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
 
         indexBuffer.SetData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
-        imGuiRenderer.Initialize();
+        //imGuiRenderer.Initialize();
 
         //testRenderer.Initialize();
 
