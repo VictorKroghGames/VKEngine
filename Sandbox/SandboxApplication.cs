@@ -58,7 +58,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
             CullMode = CullMode.Back,
             FrontFace = FrontFace.Clockwise,
             Shader = shaderLibrary.Get("khronos_vulkan_vertex_buffer") ?? throw new InvalidOperationException("Shader not found!"),
-            PipelineLayout = new PipelineLayout(0, (2 + 3) * sizeof(float), VertexInputRate.Vertex,
+            PipelineLayout = new PipelineLayout(0, (uint)Unsafe.SizeOf<Vertex>(), VertexInputRate.Vertex,
                                     new PipelineLayoutVertexAttribute(0, 0, Format.R32g32Sfloat, 0),  // POSITION
                                     new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)Unsafe.SizeOf<Vector2>())   // COLOR
                             ),
