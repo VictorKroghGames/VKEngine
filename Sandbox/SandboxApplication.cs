@@ -6,7 +6,7 @@ using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandBufferAllocator commandBufferAllocator, IBufferFactory bufferFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -33,20 +33,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
 
         window.Initialize();
 
-        graphicsContext.Initialize();
+        renderer.Initialize();
 
         var renderPass = renderPassFactory.CreateRenderPass();
 
         swapChain.Initialize(renderPass);
-
-        commandBufferAllocator.Initialize();
-
-        var commandBuffer = commandBufferAllocator.AllocateCommandBuffer();
-
-        //shaderLibrary.Load("shader",
-        //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),
-        //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"), ShaderModuleType.Fragment)
-        //);
 
         shaderLibrary.Load("khronos_vulkan_vertex_buffer",
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.vert.spv"), ShaderModuleType.Vertex),
@@ -78,8 +69,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
 
         indexBuffer.SetData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
-        //testRenderer.Initialize();
-
         while (isRunning)
         {
             if (input.IsKeyPressed(KeyCodes.A))
@@ -92,37 +81,18 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
                 actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
             }
 
-            swapChain.AquireNextImage();
+            renderer.BeginFrame();
+            renderer.Draw(renderPass, pipeline, vertexBuffer, indexBuffer);
+            renderer.EndFrame();
 
-            commandBuffer.Begin();
-
-            commandBuffer.BeginRenderPass(renderPass);
-
-            commandBuffer.BindPipeline(pipeline);
-
-            commandBuffer.BindVertexBuffer(vertexBuffer);
-
-            commandBuffer.BindIndexBuffer(indexBuffer);
-
-            commandBuffer.DrawIndex(6);
-
-            commandBuffer.EndRenderPass();
-
-            commandBuffer.End();
-
-            commandBuffer.Submit();
-
+            renderer.Render();
             swapChain.Present();
-
-            //testRenderer.RenderTriangle();
 
             window.Update();
             isRunning = window.IsRunning;
         }
 
-        //testRenderer.Cleanup();
-
-        commandBufferAllocator.Cleanup();
+        renderer.Wait();
 
         indexBuffer.Cleanup();
         vertexBuffer.Cleanup();
@@ -133,7 +103,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
 
         swapChain.Cleanup();
 
-        graphicsContext.Cleanup();
+        renderer.Cleanup();
 
         thread.Join();
     }

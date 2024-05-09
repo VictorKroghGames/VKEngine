@@ -21,8 +21,6 @@ internal sealed class VulkanCommandPool(IVulkanLogicalDevice logicalDevice, uint
 
     public void Cleanup()
     {
-        vkDeviceWaitIdle(logicalDevice.Device);
-
         vkDestroyCommandPool(logicalDevice.Device, commandPool, IntPtr.Zero);
     }
 }
