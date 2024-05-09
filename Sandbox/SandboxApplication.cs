@@ -39,15 +39,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         swapChain.Initialize(renderPass);
 
-        //commandBufferAllocator.Initialize();
-
-        //var commandBuffer = commandBufferAllocator.AllocateCommandBuffer();
-
-        //shaderLibrary.Load("shader",
-        //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),
-        //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag.spv"), ShaderModuleType.Fragment)
-        //);
-
         shaderLibrary.Load("khronos_vulkan_vertex_buffer",
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.vert.spv"), ShaderModuleType.Vertex),
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.frag.spv"), ShaderModuleType.Fragment)
@@ -78,8 +69,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         indexBuffer.SetData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
-        //testRenderer.Initialize();
-
         while (isRunning)
         {
             if (input.IsKeyPressed(KeyCodes.A))
@@ -99,15 +88,9 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             renderer.Render();
             swapChain.Present();
 
-            //testRenderer.RenderTriangle();
-
             window.Update();
             isRunning = window.IsRunning;
         }
-
-        //testRenderer.Cleanup();
-
-        //commandBufferAllocator.Cleanup();
 
         indexBuffer.Cleanup();
         vertexBuffer.Cleanup();
@@ -119,8 +102,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         swapChain.Cleanup();
 
         renderer.Cleanup();
-
-        //graphicsContext.Cleanup();
 
         thread.Join();
     }
