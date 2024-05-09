@@ -6,7 +6,7 @@ using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IGraphicsContext graphicsContext, IShaderLibrary shaderLibrary, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandBufferAllocator commandBufferAllocator, IBufferFactory bufferFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, ICommandBufferAllocator commandBufferAllocator, IBufferFactory bufferFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -33,15 +33,15 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
 
         window.Initialize();
 
-        graphicsContext.Initialize();
+        renderer.Initialize();
 
         var renderPass = renderPassFactory.CreateRenderPass();
 
         swapChain.Initialize(renderPass);
 
-        commandBufferAllocator.Initialize();
+        //commandBufferAllocator.Initialize();
 
-        var commandBuffer = commandBufferAllocator.AllocateCommandBuffer();
+        //var commandBuffer = commandBufferAllocator.AllocateCommandBuffer();
 
         //shaderLibrary.Load("shader",
         //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),
@@ -92,26 +92,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
                 actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
             }
 
-            swapChain.AquireNextImage();
+            renderer.BeginFrame();
+            renderer.Draw(renderPass, pipeline, vertexBuffer, indexBuffer);
+            renderer.EndFrame();
 
-            commandBuffer.Begin();
-
-            commandBuffer.BeginRenderPass(renderPass);
-
-            commandBuffer.BindPipeline(pipeline);
-
-            commandBuffer.BindVertexBuffer(vertexBuffer);
-
-            commandBuffer.BindIndexBuffer(indexBuffer);
-
-            commandBuffer.DrawIndex(6);
-
-            commandBuffer.EndRenderPass();
-
-            commandBuffer.End();
-
-            commandBuffer.Submit();
-
+            renderer.Render();
             swapChain.Present();
 
             //testRenderer.RenderTriangle();
@@ -122,7 +107,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
 
         //testRenderer.Cleanup();
 
-        commandBufferAllocator.Cleanup();
+        //commandBufferAllocator.Cleanup();
 
         indexBuffer.Cleanup();
         vertexBuffer.Cleanup();
@@ -133,7 +118,9 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
 
         swapChain.Cleanup();
 
-        graphicsContext.Cleanup();
+        renderer.Cleanup();
+
+        //graphicsContext.Cleanup();
 
         thread.Join();
     }
