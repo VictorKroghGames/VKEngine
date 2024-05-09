@@ -6,7 +6,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator, ulong bufferSize, BufferUsageFlags usage, BufferMemoryPropertyFlags bufferMemoryPropertyFlags) : IBuffer
+internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator, ulong bufferSize, BufferUsageFlags usage) : IBuffer
 {
     internal VkBuffer buffer = VkBuffer.Null;
     internal VkDeviceMemory deviceMemory = VkDeviceMemory.Null;

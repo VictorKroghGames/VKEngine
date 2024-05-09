@@ -5,9 +5,9 @@ namespace VKEngine.Graphics;
 
 public interface IBufferFactory
 {
-    IBuffer CreateBuffer(ulong bufferSize, BufferUsageFlags usage, BufferMemoryPropertyFlags bufferMemoryPropertyFlags);
-    IBuffer CreateVertexBuffer(ulong bufferSize, BufferMemoryPropertyFlags bufferMemoryPropertyFlags);
-    IBuffer CreateIndexBuffer<T>(uint indexCount, BufferMemoryPropertyFlags bufferMemoryPropertyFlags) where T : INumber<T>;
+    IBuffer CreateBuffer(ulong bufferSize, BufferUsageFlags usage);
+    IBuffer CreateVertexBuffer(ulong bufferSize);
+    IBuffer CreateIndexBuffer<T>(uint indexCount) where T : INumber<T>;
 }
 
 public interface IBuffer
