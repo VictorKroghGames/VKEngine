@@ -11,9 +11,23 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
     internal VkBuffer buffer = VkBuffer.Null;
     internal VkDeviceMemory deviceMemory = VkDeviceMemory.Null;
 
+    private bool useStagingBuffer = false;
+    private IntPtr mappedMemory = IntPtr.Zero;
+
     public unsafe void Initialize()
     {
         CreateBuffer(bufferSize, (VkBufferUsageFlags)usage, (VkMemoryPropertyFlags)memoryPropertyFlags, out buffer, out deviceMemory);
+
+        useStagingBuffer = usage.HasFlag(BufferUsageFlags.TransferDst) && memoryPropertyFlags.HasFlag(BufferMemoryPropertyFlags.DeviceLocal);
+
+        if (usage.HasFlag(BufferUsageFlags.UniformBuffer))
+        {
+            fixed (void* pMappedMemory = &mappedMemory)
+            {
+                vkMapMemory(logicalDevice.Device, deviceMemory, 0, bufferSize, 0, &pMappedMemory);
+                mappedMemory = (IntPtr)pMappedMemory;
+    }
+        }
     }
 
     public void Cleanup()
@@ -30,19 +44,24 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
             throw new InvalidOperationException("Data size exceeds buffer size!");
         }
 
-        CreateBuffer(bufferSize, VkBufferUsageFlags.TransferSrc, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, out var stagingBuffer, out var stagingBufferMemory);
-
+        if (useStagingBuffer is false)
+        {
         void* mappedMemory;
         vkMapMemory(logicalDevice.Device, stagingBufferMemory, 0, size, 0, &mappedMemory);
         GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
-        Unsafe.CopyBlock(mappedMemory, gh.AddrOfPinnedObject().ToPointer(), (uint)size);
+            Unsafe.CopyBlock(mappedMemory.ToPointer(), gh.AddrOfPinnedObject().ToPointer(), (uint)size);
         gh.Free();
         vkUnmapMemory(logicalDevice.Device, stagingBufferMemory);
 
-        CopyBuffer(stagingBuffer, buffer, size);
+            return;
+        }
 
-        vkDestroyBuffer(logicalDevice.Device, stagingBuffer, IntPtr.Zero);
-        vkFreeMemory(logicalDevice.Device, stagingBufferMemory, IntPtr.Zero);
+        UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+        {
+            GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
+            Unsafe.CopyBlock(mappedMemory.ToPointer(), gh.AddrOfPinnedObject().ToPointer(), (uint)size);
+            gh.Free();
+        });
     }
 
     public unsafe void SetData<T>(ref T data)
@@ -53,12 +72,33 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
             throw new InvalidOperationException("Data size exceeds buffer size!");
         }
 
+        if (useStagingBuffer is false)
+        {
+            Unsafe.CopyBlock(mappedMemory.ToPointer(), Unsafe.AsPointer(ref data), (uint)size);
+
+            return;
+        }
+
+        UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+        {
+            Unsafe.CopyBlock(mappedMemory.ToPointer(), Unsafe.AsPointer(ref data), (uint)size);
+        });
+    }
+
+    private unsafe void UploadDataUsingStagingBuffer<T>(ulong size, T data, Action<T, IntPtr> copyDataFunc)
+    {
+        if (useStagingBuffer is false)
+        {
+            return;
+        }
+
         CreateBuffer(bufferSize, VkBufferUsageFlags.TransferSrc, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, out var stagingBuffer, out var stagingBufferMemory);
 
         void* mappedMemory;
         vkMapMemory(logicalDevice.Device, stagingBufferMemory, 0, size, 0, &mappedMemory);
-        void* dataPtr = Unsafe.AsPointer(ref data);
-        Unsafe.CopyBlock(mappedMemory, dataPtr, (uint)size);
+
+        copyDataFunc(data, (nint)mappedMemory);
+
         vkUnmapMemory(logicalDevice.Device, stagingBufferMemory);
 
         CopyBuffer(stagingBuffer, buffer, size);

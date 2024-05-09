@@ -88,7 +88,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f)
         };
 
-        var uniformBuffer = bufferFactory.CreateBuffer((ulong)Unsafe.SizeOf<UniformBufferObject>(), BufferUsageFlags.UniformBuffer | BufferUsageFlags.TransferDst, BufferMemoryPropertyFlags.DeviceLocal);
+        var uniformBuffer = bufferFactory.CreateUniformBuffer<UniformBufferObject>();
         uniformBuffer.SetData(ref uniformBufferData);
 
         pipeline.AddDescriptorSet<UniformBufferObject>(uniformBuffer);

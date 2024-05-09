@@ -24,4 +24,11 @@ internal sealed class VulkanBufferFactory(IVulkanPhysicalDevice physicalDevice, 
 
         return CreateBuffer(bufferSize, BufferUsageFlags.IndexBuffer | BufferUsageFlags.TransferDst, BufferMemoryPropertyFlags.DeviceLocal);
     }
+
+    public IBuffer CreateUniformBuffer<T>()
+    {
+        var bufferSize = (ulong)Unsafe.SizeOf<T>();
+
+        return CreateBuffer(bufferSize, BufferUsageFlags.UniformBuffer, BufferMemoryPropertyFlags.HostVisible | BufferMemoryPropertyFlags.HostCoherent);
+    }
 }
