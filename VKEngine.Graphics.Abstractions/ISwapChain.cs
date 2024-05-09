@@ -2,6 +2,8 @@
 
 public interface ISwapChain
 {
+    uint CurrentFrameIndex { get; }
+
     void Initialize(IRenderPass renderPass);
     void Cleanup();
 

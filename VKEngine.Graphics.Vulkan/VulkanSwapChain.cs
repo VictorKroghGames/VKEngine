@@ -18,9 +18,10 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
     internal VkPresentModeKHR presentMode;
     internal VkExtent2D extent;
 
-    internal VkSemaphore imageAvailableSemaphore = VkSemaphore.Null;
-    internal VkSemaphore renderFinishedSemaphore = VkSemaphore.Null;
-    internal VkFence inFlightFence = VkFence.Null;
+    internal VkSemaphore[] imageAvailableSemaphores = [];
+    internal VkSemaphore[] renderFinishedSemaphores = [];
+    internal VkFence[] inFlightFences = [];
+    private uint currentFrameIndex = 0;
 
     private uint imageCount = 0;
     internal uint imageIndex = 0;
@@ -28,6 +29,8 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
     private VulkanRenderPass vulkanRenderPass;
     private VkSurfaceFormatKHR[] supportedSurfaceFormats = [];
     private VkPresentModeKHR[] supportedPresentModes = [];
+
+    public uint CurrentFrameIndex => currentFrameIndex;
 
     public void Initialize(IRenderPass renderPass)
     {
@@ -65,14 +68,17 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
     {
         CleanupSwapChain();
 
-        vkDestroySemaphore(logicalDevice.Device, imageAvailableSemaphore, nint.Zero);
-        imageAvailableSemaphore = VkSemaphore.Null;
+        for (int i = 0; i < graphicsConfiguration.FramesInFlight; i++)
+        {
+            vkDestroySemaphore(logicalDevice.Device, imageAvailableSemaphores[i], nint.Zero);
+            imageAvailableSemaphores[i] = VkSemaphore.Null;
 
-        vkDestroySemaphore(logicalDevice.Device, renderFinishedSemaphore, nint.Zero);
-        renderFinishedSemaphore = VkSemaphore.Null;
+            vkDestroySemaphore(logicalDevice.Device, renderFinishedSemaphores[i], nint.Zero);
+            renderFinishedSemaphores[i] = VkSemaphore.Null;
 
-        vkDestroyFence(logicalDevice.Device, inFlightFence, nint.Zero);
-        inFlightFence = VkFence.Null;
+            vkDestroyFence(logicalDevice.Device, inFlightFences[i], nint.Zero);
+            inFlightFences[i] = VkFence.Null;
+        }
 
         if (graphicsContext is not IVulkanGraphicsContext vulkanGraphicsContext)
         {
@@ -223,21 +229,29 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
     private unsafe void CreateSynchronizationObjects(IVulkanLogicalDevice logicalDevice)
     {
         var semaphoreCreateInfo = VkSemaphoreCreateInfo.New();
-        if (vkCreateSemaphore(logicalDevice.Device, &semaphoreCreateInfo, null, out imageAvailableSemaphore) is not VkResult.Success)
-        {
-            throw new ApplicationException("Failed to create image available semaphore!");
-        }
-
-        if (vkCreateSemaphore(logicalDevice.Device, &semaphoreCreateInfo, null, out renderFinishedSemaphore) is not VkResult.Success)
-        {
-            throw new ApplicationException("Failed to create render finished semaphore!");
-        }
 
         var fenceCreateInfo = VkFenceCreateInfo.New();
         fenceCreateInfo.flags = VkFenceCreateFlags.Signaled;
-        if (vkCreateFence(logicalDevice.Device, &fenceCreateInfo, null, out inFlightFence) is not VkResult.Success)
+
+        imageAvailableSemaphores = new VkSemaphore[graphicsConfiguration.FramesInFlight];
+        renderFinishedSemaphores = new VkSemaphore[graphicsConfiguration.FramesInFlight];
+        inFlightFences = new VkFence[graphicsConfiguration.FramesInFlight];
+        for (int i = 0; i < graphicsConfiguration.FramesInFlight; i++)
         {
-            throw new ApplicationException("Failed to create in flight fence!");
+            if (vkCreateSemaphore(logicalDevice.Device, &semaphoreCreateInfo, null, out imageAvailableSemaphores[i]) is not VkResult.Success)
+            {
+                throw new ApplicationException("Failed to create image available semaphore!");
+            }
+
+            if (vkCreateSemaphore(logicalDevice.Device, &semaphoreCreateInfo, null, out renderFinishedSemaphores[i]) is not VkResult.Success)
+            {
+                throw new ApplicationException("Failed to create render finished semaphore!");
+            }
+
+            if (vkCreateFence(logicalDevice.Device, &fenceCreateInfo, null, out inFlightFences[i]) is not VkResult.Success)
+            {
+                throw new ApplicationException("Failed to create in flight fence!");
+            }
         }
     }
 
@@ -361,9 +375,10 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
 
     public unsafe void AquireNextImage()
     {
-        vkWaitForFences(logicalDevice.Device, 1, ref inFlightFence, true, ulong.MaxValue);
+        vkWaitForFences(logicalDevice.Device, 1, ref inFlightFences[currentFrameIndex], true, ulong.MaxValue);
+        vkResetFences(logicalDevice.Device, 1, ref inFlightFences[currentFrameIndex]);
 
-        var result = vkAcquireNextImageKHR(logicalDevice.Device, swapchain, ulong.MaxValue, imageAvailableSemaphore, VkFence.Null, ref imageIndex);
+        var result = vkAcquireNextImageKHR(logicalDevice.Device, swapchain, ulong.MaxValue, imageAvailableSemaphores[currentFrameIndex], VkFence.Null, ref imageIndex);
         if (result is VkResult.ErrorOutOfDateKHR || result is VkResult.SuboptimalKHR)
         {
             CleanupSwapChain();
@@ -380,15 +395,13 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         //{
         //    throw new ApplicationException("Failed to acquire next image!");
         //}
-
-        vkResetFences(logicalDevice.Device, 1, ref inFlightFence);
     }
 
     public unsafe void Present()
     {
         var presentInfo = VkPresentInfoKHR.New();
         presentInfo.waitSemaphoreCount = 1;
-        fixed (VkSemaphore* pRenderFinishedSemaphore = &renderFinishedSemaphore)
+        fixed (VkSemaphore* pRenderFinishedSemaphore = &renderFinishedSemaphores[currentFrameIndex])
         {
             presentInfo.pWaitSemaphores = pRenderFinishedSemaphore;
         }
@@ -415,5 +428,7 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         {
             throw new ApplicationException("Failed to present image!");
         }
+
+        currentFrameIndex = (currentFrameIndex + 1) % graphicsConfiguration.FramesInFlight;
     }
 }

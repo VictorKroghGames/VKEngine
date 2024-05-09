@@ -4,4 +4,6 @@ public interface IGraphicsContext
 {
     void Initialize();
     void Cleanup();
+
+    void Wait();
 }

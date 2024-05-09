@@ -48,7 +48,7 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         var submitInfo = VkSubmitInfo.New();
         submitInfo.pWaitDstStageMask = &pipelineStageFlags;
         submitInfo.waitSemaphoreCount = 1;
-        fixed (VkSemaphore* waitSemaphorePtr = &vulkanSwapChain.imageAvailableSemaphore)
+        fixed (VkSemaphore* waitSemaphorePtr = &vulkanSwapChain.imageAvailableSemaphores[vulkanSwapChain.CurrentFrameIndex])
         {
             submitInfo.pWaitSemaphores = waitSemaphorePtr;
         }
@@ -60,12 +60,12 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         }
 
         submitInfo.signalSemaphoreCount = 1;
-        fixed (VkSemaphore* signalSemaphorePtr = &vulkanSwapChain.renderFinishedSemaphore)
+        fixed (VkSemaphore* signalSemaphorePtr = &vulkanSwapChain.renderFinishedSemaphores[vulkanSwapChain.CurrentFrameIndex])
         {
             submitInfo.pSignalSemaphores = signalSemaphorePtr;
         }
 
-        if (vkQueueSubmit(logicalDevice.GraphicsQueue, 1, &submitInfo, vulkanSwapChain.inFlightFence) is not VkResult.Success)
+        if (vkQueueSubmit(logicalDevice.GraphicsQueue, 1, &submitInfo, vulkanSwapChain.inFlightFences[vulkanSwapChain.CurrentFrameIndex]) is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to submit command buffer!");
         }
