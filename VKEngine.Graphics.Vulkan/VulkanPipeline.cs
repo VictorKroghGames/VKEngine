@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using VKEngine.Configuration;
+﻿using VKEngine.Configuration;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
@@ -179,7 +178,7 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
             var descriptorSetLayouts = descriptorSets.OfType<VulkanDescriptorSet>().Select(x => x.descriptorSetLayout).ToArray();
 
             VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.New();
-            fixed(VkDescriptorSetLayout* pDescriptorSetLayouts = &descriptorSetLayouts[0])
+            fixed (VkDescriptorSetLayout* pDescriptorSetLayouts = &descriptorSetLayouts[0])
             {
                 pipelineLayoutCreateInfo.setLayoutCount = (uint)descriptorSetLayouts.Length;
                 pipelineLayoutCreateInfo.pSetLayouts = pDescriptorSetLayouts;

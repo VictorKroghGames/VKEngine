@@ -1,5 +1,4 @@
-﻿using System;
-using Vulkan;
+﻿using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;

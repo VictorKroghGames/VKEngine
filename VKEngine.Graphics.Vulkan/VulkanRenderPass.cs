@@ -19,7 +19,7 @@ internal sealed class VulkanRenderPass(IVulkanLogicalDevice logicalDevice, ISwap
 
     internal unsafe void Initialize()
     {
-        if(swapChain is not VulkanSwapChain vulkanSwapChain)
+        if (swapChain is not VulkanSwapChain vulkanSwapChain)
         {
             throw new InvalidOperationException("Invalid swap chain type!");
         }
