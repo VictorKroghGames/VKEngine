@@ -18,6 +18,13 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
         public readonly Vector3 Color = color;
     }
 
+    internal readonly struct UniformBufferObject(Matrix4x4 model, Matrix4x4 view, Matrix4x4 projection)
+    {
+        public readonly Matrix4x4 Model = model;
+        public readonly Matrix4x4 View = view;
+        public readonly Matrix4x4 Projection = projection;
+    }
+
     public void Dispose()
     {
         window.Dispose();
@@ -51,6 +58,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
         shaderLibrary.Load("khronos_vulkan_vertex_buffer",
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.vert.spv"), ShaderModuleType.Vertex),
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.frag.spv"), ShaderModuleType.Fragment)
+        );
+
+        shaderLibrary.Load("khronos_vulkan_uniform_buffer",
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_uniform_buffer.vert.spv"), ShaderModuleType.Vertex),
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_uniform_buffer.frag.spv"), ShaderModuleType.Fragment)
         );
 
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
