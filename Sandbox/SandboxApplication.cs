@@ -59,7 +59,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {
             CullMode = CullMode.Back,
-            FrontFace = FrontFace.Clockwise,
+            FrontFace = FrontFace.CounterClockwise,
             Shader = shaderLibrary.Get("khronos_vulkan_uniform_buffer") ?? throw new InvalidOperationException("Shader not found!"),
             PipelineLayout = new PipelineLayout(0, (uint)Unsafe.SizeOf<Vertex>(), VertexInputRate.Vertex,
                                     new PipelineLayoutVertexAttribute(0, 0, Format.R32g32Sfloat, 0),  // POSITION
@@ -91,6 +91,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         var uniformBuffer = bufferFactory.CreateBuffer((ulong)Unsafe.SizeOf<UniformBufferObject>(), BufferUsageFlags.UniformBuffer | BufferUsageFlags.TransferDst, BufferMemoryPropertyFlags.DeviceLocal);
         uniformBuffer.SetData(ref uniformBufferData);
 
+        pipeline.AddDescriptorSet<UniformBufferObject>(uniformBuffer);
+
         while (isRunning)
         {
             if (input.IsKeyPressed(KeyCodes.A))
@@ -106,6 +108,12 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             // Update uniform buffer
             {
                 uniformBufferData.Model = Matrix4x4.CreateRotationZ((float)DateTime.Now.TimeOfDay.TotalSeconds);
+                uniformBufferData.View = Matrix4x4.CreateTranslation(0.0f, 0.0f, -2.0f);
+                uniformBufferData.Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f);
+
+                var projection = uniformBufferData.Projection;
+                projection.M11 *= -1;
+                uniformBufferData.Projection = projection;
 
                 uniformBuffer.SetData(ref uniformBufferData);
             }

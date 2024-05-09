@@ -43,6 +43,8 @@ public interface IPipeline
 {
     void Cleanup();
 
+    void AddDescriptorSet<T>(IBuffer uniformBuffer);
+
     void Bind();
     void Unbind();
 }

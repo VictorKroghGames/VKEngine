@@ -129,7 +129,7 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         vkCmdEndRenderPass(commandBuffer);
     }
 
-    public void BindPipeline(IPipeline pipeline)
+    public unsafe void BindPipeline(IPipeline pipeline)
     {
         if (pipeline is not VulkanPipeline vulkanPipeline)
         {
@@ -137,6 +137,8 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         }
 
         vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipeline);
+
+        vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipelineLayout, 0, 1, ref vulkanPipeline.descriptorSet, 0, null);
     }
 
     public unsafe void BindVertexBuffer(IBuffer buffer)

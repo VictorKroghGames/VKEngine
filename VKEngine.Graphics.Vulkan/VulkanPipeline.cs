@@ -1,24 +1,26 @@
-﻿using Vulkan;
+﻿using System.Runtime.CompilerServices;
+using VKEngine.Configuration;
+using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanPipelineFactory(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IPipelineFactory
+internal sealed class VulkanPipelineFactory(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IPipelineFactory
 {
     public IPipeline CreateGraphicsPipeline(PipelineSpecification specification)
     {
-        var vulkanPipeline = new VulkanPipeline(logicalDevice, swapChain, specification);
+        var vulkanPipeline = new VulkanPipeline(graphicsConfiguration, logicalDevice, swapChain, specification);
         vulkanPipeline.Initialize();
         return vulkanPipeline;
     }
 }
 
-internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification specification) : IPipeline
+internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification specification) : IPipeline
 {
     internal VkPipeline pipeline;
 
     private VkDescriptorSetLayout descriptorSetLayout;
-    private VkPipelineLayout pipelineLayout;
+    internal VkPipelineLayout pipelineLayout;
 
     internal unsafe void Initialize()
     {
@@ -239,8 +241,73 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
     {
         vkDestroyPipeline(logicalDevice.Device, pipeline, IntPtr.Zero);
 
+        vkDestroyDescriptorPool(logicalDevice.Device, descriptorPool, IntPtr.Zero);
+
         vkDestroyDescriptorSetLayout(logicalDevice.Device, descriptorSetLayout, IntPtr.Zero);
         vkDestroyPipelineLayout(logicalDevice.Device, pipelineLayout, IntPtr.Zero);
+    }
+
+    private VkDescriptorPool descriptorPool = VkDescriptorPool.Null;
+    internal VkDescriptorSet descriptorSet = VkDescriptorSet.Null;
+
+    public unsafe void AddDescriptorSet<T>(IBuffer uniformBuffer)
+    {
+        if(uniformBuffer is not VulkanBuffer vulkanBuffer)
+        {
+            throw new InvalidOperationException("Invalid buffer type!");
+        }
+
+        VkDescriptorPoolSize descriptorPoolSize = new()
+        {
+            type = VkDescriptorType.UniformBuffer,
+            descriptorCount = 1
+        };
+
+        VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = new()
+        {
+            sType = VkStructureType.DescriptorPoolCreateInfo,
+            maxSets = 1,
+            poolSizeCount = 1,
+            pPoolSizes = &descriptorPoolSize
+        };
+
+        if (vkCreateDescriptorPool(logicalDevice.Device, &descriptorPoolCreateInfo, null, out descriptorPool) is not VkResult.Success)
+        {
+            throw new InvalidOperationException("Failed to create descriptor pool!");
+        }
+
+        var layouts = Enumerable.Range(0, (int)graphicsConfiguration.FramesInFlight).Select(x => descriptorSetLayout).ToArray();
+        VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = VkDescriptorSetAllocateInfo.New();
+        descriptorSetAllocateInfo.descriptorPool = descriptorPool;
+        descriptorSetAllocateInfo.descriptorSetCount = 1u;
+        fixed (VkDescriptorSetLayout* pDescriptorSetLayout = &descriptorSetLayout)
+        {
+            descriptorSetAllocateInfo.pSetLayouts = pDescriptorSetLayout;
+        }
+
+        if(vkAllocateDescriptorSets(logicalDevice.Device, &descriptorSetAllocateInfo, out descriptorSet) is not VkResult.Success)
+        {
+            throw new InvalidOperationException("Failed to allocate descriptor set!");
+        }
+
+        for (int i = 0; i < graphicsConfiguration.FramesInFlight; i++)
+        {
+            var descriptorBufferInfo = new VkDescriptorBufferInfo
+            {
+                buffer = vulkanBuffer.buffer,
+                offset = 0,
+                range = (ulong)Unsafe.SizeOf<T>()
+            };
+
+            VkWriteDescriptorSet writeDescriptorSet = VkWriteDescriptorSet.New();
+            writeDescriptorSet.dstSet = descriptorSet;
+            writeDescriptorSet.dstBinding = 0;
+            writeDescriptorSet.descriptorCount = 1;
+            writeDescriptorSet.descriptorType = VkDescriptorType.UniformBuffer;
+            writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
+
+            vkUpdateDescriptorSets(logicalDevice.Device, 1, &writeDescriptorSet, 0, null);
+        }
     }
 
     public void Bind()
