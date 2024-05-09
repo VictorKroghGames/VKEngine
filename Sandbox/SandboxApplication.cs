@@ -115,6 +115,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         swapChain.Cleanup();
 
+        shaderLibrary.Cleanup();
+
         renderer.Cleanup();
 
         thread.Join();

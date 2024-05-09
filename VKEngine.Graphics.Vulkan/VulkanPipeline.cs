@@ -229,11 +229,6 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
         {
             throw new InvalidOperationException("Failed to create graphics pipeline!");
         }
-
-        foreach (var shaderModule in shaderModules)
-        {
-            vkDestroyShaderModule(logicalDevice.Device, shaderModule.Module, IntPtr.Zero);
-        }
     }
 
     public void Cleanup()
