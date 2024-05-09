@@ -1,5 +1,6 @@
 ﻿using ImGuiNET;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using VKEngine.Configuration;
 using static ImGuiNET.ImGui;
 
@@ -13,12 +14,20 @@ public interface IImGuiRenderer
     void End();
 }
 
-internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration) : IImGuiRenderer
+internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, IShaderFactory shaderFactory, IPipelineFactory pipelineFactory, IBufferFactory bufferFactory) : IImGuiRenderer
 {
+    private IPipeline pipeline;
+    private IBuffer vertexBuffer;
+    private IBuffer indexBuffer;
+
+    private ulong vertexBufferSize;
+    private ulong indexBufferSize;
+
     private IntPtr contextPtr;
 
     private bool frameBegun = false;
     private Vector2 scaleFactor = Vector2.One;
+    private static int sizeOfImDrawVert = Unsafe.SizeOf<ImDrawVert>();
 
     public void Initialize()
     {
@@ -30,6 +39,8 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration) 
 
         io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable | ImGuiConfigFlags.ViewportsEnable;
+
+        CreateDeviceResources();
 
         SetPerFrameImGuiData(1.0f / 60.0f);
     }
@@ -51,7 +62,7 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration) 
         frameBegun = false;
 
         Render();
-        // RenderDrawData();
+        RenderImDrawData(GetDrawData());
 
         var io = GetIO();
         if (io.ConfigFlags.HasFlag(ImGuiConfigFlags.ViewportsEnable))
@@ -63,6 +74,18 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration) 
         }
     }
 
+    private void RenderImDrawData(ImDrawDataPtr draw_data)
+    {
+        if (draw_data.CmdListsCount == 0)
+        {
+            return;
+        }
+
+        // Setup orthographic projection matrix into our constant buffer
+        ImGuiIOPtr io = GetIO();
+        Matrix4x4 mvp = Matrix4x4.CreateOrthographicOffCenter(0.0f, io.DisplaySize.X, io.DisplaySize.Y, 0.0f, -1.0f, 1.0f);
+    }
+
     public void Shutdown()
     {
         DestroyContext();
@@ -71,6 +94,29 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration) 
     public void DrawDemoWindow()
     {
         ShowDemoWindow();
+    }
+
+    private void CreateDeviceResources()
+    {
+        vertexBufferSize = 10000;
+        indexBufferSize = 2000;
+
+        var shader = shaderFactory.CreateShader("ImGui",
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "shaders", "imgui.vert.spv"), ShaderModuleType.Vertex),
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "shaders", "imgui.frag.spv"), ShaderModuleType.Fragment)
+        );
+
+        pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
+        {
+            PipelineLayout = new PipelineLayout(0, (uint)sizeOfImDrawVert, VertexInputRate.Vertex,
+                new PipelineLayoutVertexAttribute(0, 1, Format.R32g32Sfloat, 0),            // position
+                new PipelineLayoutVertexAttribute(0, 2, Format.R32g32Sfloat, 0),            // uv
+                new PipelineLayoutVertexAttribute(0, 3, Format.R32g32b32a32Sfloat, 0)       // color
+            ),
+            Shader = shader
+        });
+        vertexBuffer = bufferFactory.CreateVertexBuffer(vertexBufferSize);
+        //indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(indexBufferSize);
     }
 
     private void SetPerFrameImGuiData(float deltaTime)
