@@ -21,7 +21,7 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
     private IBuffer indexBuffer;
 
     private ulong vertexBufferSize;
-    private ulong indexBufferSize;
+    private uint indexBufferSize;
 
     private IntPtr contextPtr;
 
@@ -74,6 +74,7 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
         }
     }
 
+    // https://github.com/ImGuiNET/ImGui.NET/blob/master/src/ImGui.NET.SampleProgram/ImGuiController.cs
     private void RenderImDrawData(ImDrawDataPtr draw_data)
     {
         if (draw_data.CmdListsCount == 0)
@@ -81,9 +82,17 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
             return;
         }
 
+        for (int i = 0; i < draw_data.CmdListsCount; i++)
+        {
+            var commandList = draw_data.CmdLists[i];
+
+        }
+
         // Setup orthographic projection matrix into our constant buffer
         ImGuiIOPtr io = GetIO();
         Matrix4x4 mvp = Matrix4x4.CreateOrthographicOffCenter(0.0f, io.DisplaySize.X, io.DisplaySize.Y, 0.0f, -1.0f, 1.0f);
+
+        draw_data.ScaleClipRects(io.DisplayFramebufferScale);
     }
 
     public void Shutdown()
@@ -116,7 +125,7 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
             Shader = shader
         });
         vertexBuffer = bufferFactory.CreateVertexBuffer(vertexBufferSize);
-        //indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(indexBufferSize);
+        indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(indexBufferSize);
     }
 
     private void SetPerFrameImGuiData(float deltaTime)
