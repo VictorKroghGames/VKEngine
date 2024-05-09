@@ -49,6 +49,11 @@ internal class DefaultRenderer(IGraphicsConfiguration graphicsConfiguration, IGr
         currentFrameCommandBuffer.Submit();
     }
 
+    public void Wait()
+    {
+        graphicsContext.Wait();
+    }
+
     public void Draw(IRenderPass renderPass, IPipeline pipeline, IBuffer vertexBuffer, IBuffer indexBuffer)
     {
         currentFrameCommandBuffer.BeginRenderPass(renderPass);

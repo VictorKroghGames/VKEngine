@@ -92,6 +92,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             isRunning = window.IsRunning;
         }
 
+        renderer.Wait();
+
         indexBuffer.Cleanup();
         vertexBuffer.Cleanup();
 

@@ -9,5 +9,7 @@ public interface IRenderer
     void EndFrame();
     void Render();
 
+    void Wait();
+
     void Draw(IRenderPass renderPass, IPipeline pipeline, IBuffer vertexBuffer, IBuffer indexBuffer);
 }
