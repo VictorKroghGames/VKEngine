@@ -64,7 +64,7 @@ internal class DefaultRenderer(IGraphicsConfiguration graphicsConfiguration, IGr
 
         currentFrameCommandBuffer.BindIndexBuffer(indexBuffer);
 
-        currentFrameCommandBuffer.BindDescritporSet(pipeline, descriptorSet);
+        currentFrameCommandBuffer.BindDescriptorSet(pipeline, descriptorSet);
 
         currentFrameCommandBuffer.DrawIndex(6);
 

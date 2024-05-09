@@ -160,7 +160,7 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         vkCmdBindIndexBuffer(commandBuffer, vulkanBuffer.buffer, 0, VkIndexType.Uint16);
     }
 
-    public unsafe void BindDescritporSet(IPipeline pipeline, IDescriptorSet descriptorSet)
+    public unsafe void BindDescriptorSet(IPipeline pipeline, IDescriptorSet descriptorSet)
     {
         if (pipeline is not VulkanPipeline vulkanPipeline)
         {

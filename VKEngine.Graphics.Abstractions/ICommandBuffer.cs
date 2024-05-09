@@ -14,7 +14,7 @@ public interface ICommandBuffer
     void BindPipeline(IPipeline pipeline);
     void BindVertexBuffer(IBuffer buffer);
     void BindIndexBuffer(IBuffer buffer);
-    void BindDescritporSet(IPipeline pipeline, IDescriptorSet descriptorSet);
+    void BindDescriptorSet(IPipeline pipeline, IDescriptorSet descriptorSet);
 
     void Draw();
     void DrawIndex(uint indexCount);
