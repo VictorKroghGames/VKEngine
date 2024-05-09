@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using VKEngine.Graphics.Enumerations;
 using Vulkan;
@@ -7,14 +6,14 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator, ulong bufferSize, BufferUsageFlags usage) : IBuffer
+internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator, ulong bufferSize, BufferUsageFlags usage, BufferMemoryPropertyFlags memoryPropertyFlags) : IBuffer
 {
     internal VkBuffer buffer = VkBuffer.Null;
     internal VkDeviceMemory deviceMemory = VkDeviceMemory.Null;
 
     public unsafe void Initialize()
     {
-        CreateBuffer(bufferSize, (VkBufferUsageFlags)usage | VkBufferUsageFlags.TransferDst, VkMemoryPropertyFlags.DeviceLocal, out buffer, out deviceMemory);
+        CreateBuffer(bufferSize, (VkBufferUsageFlags)usage, (VkMemoryPropertyFlags)memoryPropertyFlags, out buffer, out deviceMemory);
     }
 
     public void Cleanup()
@@ -73,7 +72,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         var commandPool = commandPoolFactory.CreateCommandPool(physicalDevice.QueueFamilyIndices.Transfer);
 
         var commandBuffer = commandBufferAllocator.AllocateCommandBuffer(commandPool: commandPool);
-        if(commandBuffer is not VulkanCommandBuffer vulkanCommandBuffer)
+        if (commandBuffer is not VulkanCommandBuffer vulkanCommandBuffer)
         {
             throw new InvalidOperationException("Failed to allocate command buffer!");
         }

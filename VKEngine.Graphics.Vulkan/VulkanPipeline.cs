@@ -176,12 +176,14 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
 
         // PIPELINE LAYOUT
         {
-            var descriptorSetLayoutBinding = new VkDescriptorSetLayoutBinding();
-            descriptorSetLayoutBinding.binding = 0;
-            descriptorSetLayoutBinding.descriptorType = VkDescriptorType.UniformBuffer;
-            descriptorSetLayoutBinding.descriptorCount = 1;
-            descriptorSetLayoutBinding.stageFlags = VkShaderStageFlags.Vertex;
-            descriptorSetLayoutBinding.pImmutableSamplers = null;
+            var descriptorSetLayoutBinding = new VkDescriptorSetLayoutBinding
+            {
+                binding = 0,
+                descriptorType = VkDescriptorType.UniformBuffer,
+                descriptorCount = 1,
+                stageFlags = VkShaderStageFlags.Vertex,
+                pImmutableSamplers = null
+            };
 
             var descriptorSetLayoutCreateInfo = VkDescriptorSetLayoutCreateInfo.New();
             descriptorSetLayoutCreateInfo.bindingCount = 1;
@@ -193,6 +195,8 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
             }
 
             VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.New();
+            //pipelineLayoutCreateInfo.setLayoutCount = 0;
+            //pipelineLayoutCreateInfo.pSetLayouts = null;
             pipelineLayoutCreateInfo.setLayoutCount = 1;
             fixed (VkDescriptorSetLayout* pDescriptorSetLayout = &descriptorSetLayout)
             {

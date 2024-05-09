@@ -18,11 +18,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         public readonly Vector3 Color = color;
     }
 
-    internal readonly struct UniformBufferObject(Matrix4x4 model, Matrix4x4 view, Matrix4x4 projection)
+    internal struct UniformBufferObject
     {
-        public readonly Matrix4x4 Model = model;
-        public readonly Matrix4x4 View = view;
-        public readonly Matrix4x4 Projection = projection;
+        public Matrix4x4 Model { get; set; }
+        public Matrix4x4 View { get; set; }
+        public Matrix4x4 Projection { get; set; }
     }
 
     public void Dispose()
@@ -60,7 +60,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         {
             CullMode = CullMode.Back,
             FrontFace = FrontFace.Clockwise,
-            Shader = shaderLibrary.Get("khronos_vulkan_vertex_buffer") ?? throw new InvalidOperationException("Shader not found!"),
+            Shader = shaderLibrary.Get("khronos_vulkan_uniform_buffer") ?? throw new InvalidOperationException("Shader not found!"),
             PipelineLayout = new PipelineLayout(0, (uint)Unsafe.SizeOf<Vertex>(), VertexInputRate.Vertex,
                                     new PipelineLayoutVertexAttribute(0, 0, Format.R32g32Sfloat, 0),  // POSITION
                                     new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)Unsafe.SizeOf<Vector2>())   // COLOR
@@ -81,9 +81,14 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         indexBuffer.SetData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
-        var uniformBufferData = new UniformBufferObject(Matrix4x4.Identity, Matrix4x4.Identity, Matrix4x4.Identity);
+        var uniformBufferData = new UniformBufferObject
+        {
+            Model = Matrix4x4.Identity,
+            View = Matrix4x4.CreateTranslation(0.0f, 0.0f, -2.0f),
+            Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f)
+        };
 
-        var uniformBuffer = bufferFactory.CreateBuffer((ulong)Unsafe.SizeOf<UniformBufferObject>(), BufferUsageFlags.UniformBuffer);
+        var uniformBuffer = bufferFactory.CreateBuffer((ulong)Unsafe.SizeOf<UniformBufferObject>(), BufferUsageFlags.UniformBuffer | BufferUsageFlags.TransferDst, BufferMemoryPropertyFlags.DeviceLocal);
         uniformBuffer.SetData(ref uniformBufferData);
 
         while (isRunning)
@@ -96,6 +101,13 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             if (input.IsKeyPressed(KeyCodes.D))
             {
                 actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
+            }
+
+            // Update uniform buffer
+            {
+                uniformBufferData.Model = Matrix4x4.CreateRotationZ((float)DateTime.Now.TimeOfDay.TotalSeconds);
+
+                uniformBuffer.SetData(ref uniformBufferData);
             }
 
             renderer.BeginFrame();
