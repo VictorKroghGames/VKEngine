@@ -93,8 +93,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         indexBuffer.UploadData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
-        //pipeline.AddDescriptorSet<UniformBufferObject>(uniformBuffer);
-
         while (isRunning)
         {
             if (input.IsKeyPressed(KeyCodes.A))
