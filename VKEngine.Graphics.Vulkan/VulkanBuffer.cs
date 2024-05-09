@@ -12,6 +12,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
     internal VkDeviceMemory deviceMemory = VkDeviceMemory.Null;
 
     private bool useStagingBuffer = false;
+    private bool useDirectUpload = false;
     private IntPtr mappedMemory = IntPtr.Zero;
 
     public unsafe void Initialize()
@@ -19,8 +20,9 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         CreateBuffer(bufferSize, (VkBufferUsageFlags)usage, (VkMemoryPropertyFlags)memoryPropertyFlags, out buffer, out deviceMemory);
 
         useStagingBuffer = usage.HasFlag(BufferUsageFlags.TransferDst) && memoryPropertyFlags.HasFlag(BufferMemoryPropertyFlags.DeviceLocal);
+        useDirectUpload = usage.HasFlag(BufferUsageFlags.UniformBuffer);
 
-        if (usage.HasFlag(BufferUsageFlags.UniformBuffer))
+        if (useDirectUpload)
         {
             fixed (void* pMappedMemory = &mappedMemory)
             {
@@ -44,7 +46,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
             throw new InvalidOperationException("Data size exceeds buffer size!");
         }
 
-        if (useStagingBuffer is false)
+        if (useDirectUpload is true)
         {
             GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
             Unsafe.CopyBlock(mappedMemory.ToPointer(), gh.AddrOfPinnedObject().ToPointer(), (uint)size);
@@ -53,12 +55,19 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
             return;
         }
 
-        UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+        if (useStagingBuffer is true)
         {
-            GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
-            Unsafe.CopyBlock(mappedMemory.ToPointer(), gh.AddrOfPinnedObject().ToPointer(), (uint)size);
-            gh.Free();
-        });
+            UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+            {
+                GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
+                Unsafe.CopyBlock(mappedMemory.ToPointer(), gh.AddrOfPinnedObject().ToPointer(), (uint)size);
+                gh.Free();
+            });
+
+            return;
+        }
+
+        throw new NotImplementedException();
     }
 
     public unsafe void UploadData<T>(ref T data)
@@ -69,17 +78,24 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
             throw new InvalidOperationException("Data size exceeds buffer size!");
         }
 
-        if (useStagingBuffer is false)
+        if (useDirectUpload is true)
         {
             Unsafe.CopyBlock(mappedMemory.ToPointer(), Unsafe.AsPointer(ref data), (uint)size);
 
             return;
         }
 
-        UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+        if (useStagingBuffer is true)
         {
-            Unsafe.CopyBlock(mappedMemory.ToPointer(), Unsafe.AsPointer(ref data), (uint)size);
-        });
+            UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+            {
+                Unsafe.CopyBlock(mappedMemory.ToPointer(), Unsafe.AsPointer(ref data), (uint)size);
+            });
+
+            return;
+        }
+
+        throw new NotImplementedException();
     }
 
     private unsafe void UploadDataUsingStagingBuffer<T>(ulong size, T data, Action<T, IntPtr> copyDataFunc)
