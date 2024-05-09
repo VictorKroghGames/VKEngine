@@ -26,7 +26,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
             {
                 vkMapMemory(logicalDevice.Device, deviceMemory, 0, bufferSize, 0, &pMappedMemory);
                 mappedMemory = (IntPtr)pMappedMemory;
-    }
+            }
         }
     }
 
@@ -36,7 +36,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         vkFreeMemory(logicalDevice.Device, deviceMemory, IntPtr.Zero);
     }
 
-    public unsafe void SetData<T>(T[] data)
+    public unsafe void UploadData<T>(T[] data)
     {
         var size = (ulong)(data.Length * Unsafe.SizeOf<T>());
         if (size > bufferSize)
@@ -46,12 +46,9 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
 
         if (useStagingBuffer is false)
         {
-        void* mappedMemory;
-        vkMapMemory(logicalDevice.Device, stagingBufferMemory, 0, size, 0, &mappedMemory);
-        GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
+            GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
             Unsafe.CopyBlock(mappedMemory.ToPointer(), gh.AddrOfPinnedObject().ToPointer(), (uint)size);
-        gh.Free();
-        vkUnmapMemory(logicalDevice.Device, stagingBufferMemory);
+            gh.Free();
 
             return;
         }
@@ -64,7 +61,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         });
     }
 
-    public unsafe void SetData<T>(ref T data)
+    public unsafe void UploadData<T>(ref T data)
     {
         var size = (ulong)Unsafe.SizeOf<T>();
         if (size > bufferSize)

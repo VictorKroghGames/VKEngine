@@ -70,7 +70,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(4 * Unsafe.SizeOf<Vertex>()));
 
-        vertexBuffer.SetData([
+        vertexBuffer.UploadData([
             new Vertex(new Vector2(-0.5f, -0.5f), new Vector3(1.0f, 0.0f, 0.0f)),
             new Vertex(new Vector2( 0.5f, -0.5f), new Vector3(0.0f, 1.0f, 0.0f)),
             new Vertex(new Vector2( 0.5f,  0.5f), new Vector3(0.0f, 0.0f, 1.0f)),
@@ -79,7 +79,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         var indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(6);
 
-        indexBuffer.SetData(new ushort[] { 0, 1, 2, 2, 3, 0 });
+        indexBuffer.UploadData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
         var uniformBufferData = new UniformBufferObject
         {
@@ -89,7 +89,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         };
 
         var uniformBuffer = bufferFactory.CreateUniformBuffer<UniformBufferObject>();
-        uniformBuffer.SetData(ref uniformBufferData);
+        uniformBuffer.UploadData(ref uniformBufferData);
 
         pipeline.AddDescriptorSet<UniformBufferObject>(uniformBuffer);
 
@@ -115,7 +115,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
                 projection.M11 *= -1;
                 uniformBufferData.Projection = projection;
 
-                uniformBuffer.SetData(ref uniformBufferData);
+                uniformBuffer.UploadData(ref uniformBufferData);
             }
 
             renderer.BeginFrame();

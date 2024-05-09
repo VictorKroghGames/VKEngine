@@ -16,6 +16,6 @@ public interface IBuffer
     void Initialize();
     void Cleanup();
 
-    void SetData<T>(T[] data);
-    void SetData<T>(ref T data);
+    void UploadData<T>(T[] data);
+    void UploadData<T>(ref T data);
 }
