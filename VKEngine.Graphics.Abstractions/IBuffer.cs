@@ -16,4 +16,5 @@ public interface IBuffer
     void Cleanup();
 
     void SetData<T>(T[] data);
+    void SetData<T>(ref T data);
 }

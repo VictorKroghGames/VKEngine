@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using VKEngine.Graphics.Enumerations;
 using Vulkan;
@@ -37,6 +38,28 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
         Unsafe.CopyBlock(mappedMemory, gh.AddrOfPinnedObject().ToPointer(), (uint)size);
         gh.Free();
+        vkUnmapMemory(logicalDevice.Device, stagingBufferMemory);
+
+        CopyBuffer(stagingBuffer, buffer, size);
+
+        vkDestroyBuffer(logicalDevice.Device, stagingBuffer, IntPtr.Zero);
+        vkFreeMemory(logicalDevice.Device, stagingBufferMemory, IntPtr.Zero);
+    }
+
+    public unsafe void SetData<T>(ref T data)
+    {
+        var size = (ulong)Unsafe.SizeOf<T>();
+        if (size > bufferSize)
+        {
+            throw new InvalidOperationException("Data size exceeds buffer size!");
+        }
+
+        CreateBuffer(bufferSize, VkBufferUsageFlags.TransferSrc, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, out var stagingBuffer, out var stagingBufferMemory);
+
+        void* mappedMemory;
+        vkMapMemory(logicalDevice.Device, stagingBufferMemory, 0, size, 0, &mappedMemory);
+        void* dataPtr = Unsafe.AsPointer(ref data);
+        Unsafe.CopyBlock(mappedMemory, dataPtr, (uint)size);
         vkUnmapMemory(logicalDevice.Device, stagingBufferMemory);
 
         CopyBuffer(stagingBuffer, buffer, size);

@@ -81,6 +81,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         indexBuffer.SetData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
+        var uniformBufferData = new UniformBufferObject(Matrix4x4.Identity, Matrix4x4.Identity, Matrix4x4.Identity);
+
+        var uniformBuffer = bufferFactory.CreateBuffer((ulong)Unsafe.SizeOf<UniformBufferObject>(), BufferUsageFlags.UniformBuffer);
+        uniformBuffer.SetData(ref uniformBufferData);
+
         while (isRunning)
         {
             if (input.IsKeyPressed(KeyCodes.A))
@@ -106,6 +111,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         renderer.Wait();
 
+        uniformBuffer.Cleanup();
         indexBuffer.Cleanup();
         vertexBuffer.Cleanup();
 
