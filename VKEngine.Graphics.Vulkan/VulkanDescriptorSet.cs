@@ -9,13 +9,18 @@ internal sealed class VulkanDescriptorSetFactory(IGraphicsConfiguration graphics
 {
     public IDescriptorSet CreateDescriptorSet<T>(IBuffer buffer)
     {
+        return CreateDescriptorSet<T>(graphicsConfiguration.FramesInFlight, buffer);
+    }
+
+    public IDescriptorSet CreateDescriptorSet<T>(uint maxSets, IBuffer buffer)
+    {
         if (buffer is not VulkanBuffer vulkanBuffer)
         {
             throw new InvalidOperationException("Invalid buffer type!");
         }
 
         var descriptorSet = new VulkanDescriptorSet(graphicsConfiguration, logicalDevice);
-        descriptorSet.Initialize<T>(vulkanBuffer);
+        descriptorSet.Initialize<T>(maxSets, vulkanBuffer);
         return descriptorSet;
     }
 }
@@ -23,11 +28,13 @@ internal sealed class VulkanDescriptorSetFactory(IGraphicsConfiguration graphics
 internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice) : IDescriptorSet
 {
     private VkDescriptorPool descriptorPool = VkDescriptorPool.Null;
-    internal VkDescriptorSet descriptorSet = VkDescriptorSet.Null;
     internal VkDescriptorSetLayout descriptorSetLayout = VkDescriptorSetLayout.Null;
+    internal VkDescriptorSet[] descriptorSets = [];
 
-    internal unsafe void Initialize<T>(VulkanBuffer vulkanBuffer)
+    internal unsafe void Initialize<T>(uint maxSets, VulkanBuffer vulkanBuffer)
     {
+        CreateDescriptorPool(maxSets);
+
         var descriptorSetLayoutBinding = new VkDescriptorSetLayoutBinding
         {
             binding = 0,
@@ -46,37 +53,22 @@ internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfigu
             throw new InvalidOperationException("Failed to create descriptor set layout!");
         }
 
-        VkDescriptorPoolSize descriptorPoolSize = new()
-        {
-            type = VkDescriptorType.UniformBuffer,
-            descriptorCount = 1
-        };
-
-        VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = new()
-        {
-            sType = VkStructureType.DescriptorPoolCreateInfo,
-            maxSets = 1,
-            poolSizeCount = 1,
-            pPoolSizes = &descriptorPoolSize
-        };
-
-        if (vkCreateDescriptorPool(logicalDevice.Device, &descriptorPoolCreateInfo, null, out descriptorPool) is not VkResult.Success)
-        {
-            throw new InvalidOperationException("Failed to create descriptor pool!");
-        }
-
-        //var layouts = Enumerable.Range(0, (int)graphicsConfiguration.FramesInFlight).Select(x => descriptorSetLayout).ToArray();
+        var layouts = Enumerable.Range(0, (int)graphicsConfiguration.FramesInFlight).Select(x => descriptorSetLayout).ToArray();
         VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = VkDescriptorSetAllocateInfo.New();
         descriptorSetAllocateInfo.descriptorPool = descriptorPool;
-        descriptorSetAllocateInfo.descriptorSetCount = 1u;
-        fixed (VkDescriptorSetLayout* pDescriptorSetLayout = &descriptorSetLayout)
+        descriptorSetAllocateInfo.descriptorSetCount = (uint)layouts.Length;
+        fixed (VkDescriptorSetLayout* pDescriptorSetLayout = &layouts[0])
         {
             descriptorSetAllocateInfo.pSetLayouts = pDescriptorSetLayout;
         }
 
-        if (vkAllocateDescriptorSets(logicalDevice.Device, &descriptorSetAllocateInfo, out descriptorSet) is not VkResult.Success)
+        descriptorSets = new VkDescriptorSet[graphicsConfiguration.FramesInFlight];
+        fixed (VkDescriptorSet* pDescriptorSets = &descriptorSets[0])
         {
-            throw new InvalidOperationException("Failed to allocate descriptor set!");
+            if (vkAllocateDescriptorSets(logicalDevice.Device, &descriptorSetAllocateInfo, pDescriptorSets) is not VkResult.Success)
+            {
+                throw new InvalidOperationException("Failed to allocate descriptor set!");
+            }
         }
 
         for (int i = 0; i < graphicsConfiguration.FramesInFlight; i++)
@@ -89,10 +81,11 @@ internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfigu
             };
 
             VkWriteDescriptorSet writeDescriptorSet = VkWriteDescriptorSet.New();
-            writeDescriptorSet.dstSet = descriptorSet;
+            writeDescriptorSet.dstSet = descriptorSets[i];
             writeDescriptorSet.dstBinding = 0;
-            writeDescriptorSet.descriptorCount = 1;
+            writeDescriptorSet.dstArrayElement = 0;
             writeDescriptorSet.descriptorType = VkDescriptorType.UniformBuffer;
+            writeDescriptorSet.descriptorCount = 1;
             writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
 
             vkUpdateDescriptorSets(logicalDevice.Device, 1, &writeDescriptorSet, 0, null);
@@ -103,5 +96,27 @@ internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfigu
     {
         vkDestroyDescriptorPool(logicalDevice.Device, descriptorPool, IntPtr.Zero);
         vkDestroyDescriptorSetLayout(logicalDevice.Device, descriptorSetLayout, IntPtr.Zero);
+    }
+
+    private unsafe void CreateDescriptorPool(uint maxSets)
+    {
+        VkDescriptorPoolSize descriptorPoolSize = new()
+        {
+            type = VkDescriptorType.UniformBuffer,
+            descriptorCount = 1
+        };
+
+        VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = new()
+        {
+            sType = VkStructureType.DescriptorPoolCreateInfo,
+            maxSets = maxSets,
+            poolSizeCount = 1,
+            pPoolSizes = &descriptorPoolSize
+        };
+
+        if (vkCreateDescriptorPool(logicalDevice.Device, &descriptorPoolCreateInfo, null, out descriptorPool) is not VkResult.Success)
+        {
+            throw new InvalidOperationException("Failed to create descriptor pool!");
+        }
     }
 }
