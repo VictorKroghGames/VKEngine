@@ -16,6 +16,8 @@ internal sealed class VulkanPipelineFactory(IVulkanLogicalDevice logicalDevice, 
 internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification specification) : IPipeline
 {
     internal VkPipeline pipeline;
+
+    private VkDescriptorSetLayout descriptorSetLayout;
     private VkPipelineLayout pipelineLayout;
 
     internal unsafe void Initialize()
@@ -173,15 +175,36 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
         pipelineColorBlendStateCreateInfo.blendConstants_3 = 0.0f;
 
         // PIPELINE LAYOUT
-        VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.New();
-        pipelineLayoutCreateInfo.setLayoutCount = 0;
-        pipelineLayoutCreateInfo.pSetLayouts = null;
-        pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-        pipelineLayoutCreateInfo.pPushConstantRanges = null;
-
-        if (vkCreatePipelineLayout(logicalDevice.Device, &pipelineLayoutCreateInfo, null, out pipelineLayout) is not VkResult.Success)
         {
-            throw new InvalidOperationException("Failed to create pipeline layout!");
+            var descriptorSetLayoutBinding = new VkDescriptorSetLayoutBinding();
+            descriptorSetLayoutBinding.binding = 0;
+            descriptorSetLayoutBinding.descriptorType = VkDescriptorType.UniformBuffer;
+            descriptorSetLayoutBinding.descriptorCount = 1;
+            descriptorSetLayoutBinding.stageFlags = VkShaderStageFlags.Vertex;
+            descriptorSetLayoutBinding.pImmutableSamplers = null;
+
+            var descriptorSetLayoutCreateInfo = VkDescriptorSetLayoutCreateInfo.New();
+            descriptorSetLayoutCreateInfo.bindingCount = 1;
+            descriptorSetLayoutCreateInfo.pBindings = &descriptorSetLayoutBinding;
+
+            if (vkCreateDescriptorSetLayout(logicalDevice.Device, &descriptorSetLayoutCreateInfo, null, out descriptorSetLayout) is not VkResult.Success)
+            {
+                throw new InvalidOperationException("Failed to create descriptor set layout!");
+            }
+
+            VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.New();
+            pipelineLayoutCreateInfo.setLayoutCount = 1;
+            fixed (VkDescriptorSetLayout* pDescriptorSetLayout = &descriptorSetLayout)
+            {
+                pipelineLayoutCreateInfo.pSetLayouts = pDescriptorSetLayout;
+            }
+            pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+            pipelineLayoutCreateInfo.pPushConstantRanges = null;
+
+            if (vkCreatePipelineLayout(logicalDevice.Device, &pipelineLayoutCreateInfo, null, out pipelineLayout) is not VkResult.Success)
+            {
+                throw new InvalidOperationException("Failed to create pipeline layout!");
+            }
         }
 
         var graphicsPipelineCreateInfo = VkGraphicsPipelineCreateInfo.New();
@@ -216,6 +239,8 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
     public void Cleanup()
     {
         vkDestroyPipeline(logicalDevice.Device, pipeline, IntPtr.Zero);
+
+        vkDestroyDescriptorSetLayout(logicalDevice.Device, descriptorSetLayout, IntPtr.Zero);
         vkDestroyPipelineLayout(logicalDevice.Device, pipelineLayout, IntPtr.Zero);
     }
 
