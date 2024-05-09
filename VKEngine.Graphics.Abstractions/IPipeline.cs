@@ -36,7 +36,7 @@ public readonly struct PipelineSpecification
 
 public interface IPipelineFactory
 {
-    IPipeline CreateGraphicsPipeline(PipelineSpecification specification);
+    IPipeline CreateGraphicsPipeline(PipelineSpecification specification, params IDescriptorSet[] descriptorSets);
 }
 
 public interface IPipeline

@@ -102,4 +102,9 @@ internal sealed class VulkanGraphicsContext(IVulkanPhysicalDevice vulkanPhysical
         }
         return rawList;
     }
+
+    public void Wait()
+    {
+        vkDeviceWaitIdle(vulkanLogicalDevice.Device);
+    }
 }

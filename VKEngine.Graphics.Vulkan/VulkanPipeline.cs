@@ -1,24 +1,25 @@
-﻿using Vulkan;
+﻿using VKEngine.Configuration;
+using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanPipelineFactory(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IPipelineFactory
+internal sealed class VulkanPipelineFactory(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IPipelineFactory
 {
-    public IPipeline CreateGraphicsPipeline(PipelineSpecification specification)
+    public IPipeline CreateGraphicsPipeline(PipelineSpecification specification, params IDescriptorSet[] descriptorSets)
     {
-        var vulkanPipeline = new VulkanPipeline(logicalDevice, swapChain, specification);
-        vulkanPipeline.Initialize();
+        var vulkanPipeline = new VulkanPipeline(graphicsConfiguration, logicalDevice, swapChain, specification);
+        vulkanPipeline.Initialize(descriptorSets);
         return vulkanPipeline;
     }
 }
 
-internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification specification) : IPipeline
+internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification specification, params IDescriptorSet[] descriptorSets) : IPipeline
 {
     internal VkPipeline pipeline;
-    private VkPipelineLayout pipelineLayout;
+    internal VkPipelineLayout pipelineLayout;
 
-    internal unsafe void Initialize()
+    internal unsafe void Initialize(IDescriptorSet[] descriptorSets)
     {
         if (specification.Shader is not VulkanShader shader)
         {
@@ -173,15 +174,22 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
         pipelineColorBlendStateCreateInfo.blendConstants_3 = 0.0f;
 
         // PIPELINE LAYOUT
-        VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.New();
-        pipelineLayoutCreateInfo.setLayoutCount = 0;
-        pipelineLayoutCreateInfo.pSetLayouts = null;
-        pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-        pipelineLayoutCreateInfo.pPushConstantRanges = null;
-
-        if (vkCreatePipelineLayout(logicalDevice.Device, &pipelineLayoutCreateInfo, null, out pipelineLayout) is not VkResult.Success)
         {
-            throw new InvalidOperationException("Failed to create pipeline layout!");
+            var descriptorSetLayouts = descriptorSets.OfType<VulkanDescriptorSet>().Select(x => x.descriptorSetLayout).ToArray();
+
+            VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.New();
+            fixed (VkDescriptorSetLayout* pDescriptorSetLayouts = &descriptorSetLayouts[0])
+            {
+                pipelineLayoutCreateInfo.setLayoutCount = (uint)descriptorSetLayouts.Length;
+                pipelineLayoutCreateInfo.pSetLayouts = pDescriptorSetLayouts;
+            }
+            pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+            pipelineLayoutCreateInfo.pPushConstantRanges = null;
+
+            if (vkCreatePipelineLayout(logicalDevice.Device, &pipelineLayoutCreateInfo, null, out pipelineLayout) is not VkResult.Success)
+            {
+                throw new InvalidOperationException("Failed to create pipeline layout!");
+            }
         }
 
         var graphicsPipelineCreateInfo = VkGraphicsPipelineCreateInfo.New();
@@ -205,11 +213,6 @@ internal sealed class VulkanPipeline(IVulkanLogicalDevice logicalDevice, ISwapCh
         if (vkCreateGraphicsPipelines(logicalDevice.Device, VkPipelineCache.Null, 1u, &graphicsPipelineCreateInfo, null, out pipeline) is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to create graphics pipeline!");
-        }
-
-        foreach (var shaderModule in shaderModules)
-        {
-            vkDestroyShaderModule(logicalDevice.Device, shaderModule.Module, IntPtr.Zero);
         }
     }
 

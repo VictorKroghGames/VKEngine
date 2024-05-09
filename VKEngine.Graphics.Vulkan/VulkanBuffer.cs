@@ -6,14 +6,30 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator, ulong bufferSize, BufferUsageFlags usage) : IBuffer
+internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator, ulong bufferSize, BufferUsageFlags usage, BufferMemoryPropertyFlags memoryPropertyFlags) : IBuffer
 {
     internal VkBuffer buffer = VkBuffer.Null;
     internal VkDeviceMemory deviceMemory = VkDeviceMemory.Null;
 
+    private bool useStagingBuffer = false;
+    private bool useDirectUpload = false;
+    private IntPtr mappedMemory = IntPtr.Zero;
+
     public unsafe void Initialize()
     {
-        CreateBuffer(bufferSize, (VkBufferUsageFlags)usage | VkBufferUsageFlags.TransferDst, VkMemoryPropertyFlags.DeviceLocal, out buffer, out deviceMemory);
+        CreateBuffer(bufferSize, (VkBufferUsageFlags)usage, (VkMemoryPropertyFlags)memoryPropertyFlags, out buffer, out deviceMemory);
+
+        useStagingBuffer = usage.HasFlag(BufferUsageFlags.TransferDst) && memoryPropertyFlags.HasFlag(BufferMemoryPropertyFlags.DeviceLocal);
+        useDirectUpload = usage.HasFlag(BufferUsageFlags.UniformBuffer);
+
+        if (useDirectUpload)
+        {
+            fixed (void* pMappedMemory = &mappedMemory)
+            {
+                vkMapMemory(logicalDevice.Device, deviceMemory, 0, bufferSize, 0, &pMappedMemory);
+                mappedMemory = (IntPtr)pMappedMemory;
+            }
+        }
     }
 
     public void Cleanup()
@@ -22,7 +38,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         vkFreeMemory(logicalDevice.Device, deviceMemory, IntPtr.Zero);
     }
 
-    public unsafe void SetData<T>(T[] data)
+    public unsafe void UploadData<T>(T[] data)
     {
         var size = (ulong)(data.Length * Unsafe.SizeOf<T>());
         if (size > bufferSize)
@@ -30,13 +46,72 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
             throw new InvalidOperationException("Data size exceeds buffer size!");
         }
 
+        if (useDirectUpload is true)
+        {
+            GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
+            Unsafe.CopyBlock(mappedMemory.ToPointer(), gh.AddrOfPinnedObject().ToPointer(), (uint)size);
+            gh.Free();
+
+            return;
+        }
+
+        if (useStagingBuffer is true)
+        {
+            UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+            {
+                GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
+                Unsafe.CopyBlock(mappedMemory.ToPointer(), gh.AddrOfPinnedObject().ToPointer(), (uint)size);
+                gh.Free();
+            });
+
+            return;
+        }
+
+        throw new NotImplementedException();
+    }
+
+    public unsafe void UploadData<T>(ref T data)
+    {
+        var size = (ulong)Unsafe.SizeOf<T>();
+        if (size > bufferSize)
+        {
+            throw new InvalidOperationException("Data size exceeds buffer size!");
+        }
+
+        if (useDirectUpload is true)
+        {
+            Unsafe.CopyBlock(mappedMemory.ToPointer(), Unsafe.AsPointer(ref data), (uint)size);
+
+            return;
+        }
+
+        if (useStagingBuffer is true)
+        {
+            UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+            {
+                Unsafe.CopyBlock(mappedMemory.ToPointer(), Unsafe.AsPointer(ref data), (uint)size);
+            });
+
+            return;
+        }
+
+        throw new NotImplementedException();
+    }
+
+    private unsafe void UploadDataUsingStagingBuffer<T>(ulong size, T data, Action<T, IntPtr> copyDataFunc)
+    {
+        if (useStagingBuffer is false)
+        {
+            return;
+        }
+
         CreateBuffer(bufferSize, VkBufferUsageFlags.TransferSrc, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, out var stagingBuffer, out var stagingBufferMemory);
 
         void* mappedMemory;
         vkMapMemory(logicalDevice.Device, stagingBufferMemory, 0, size, 0, &mappedMemory);
-        GCHandle gh = GCHandle.Alloc(data, GCHandleType.Pinned);
-        Unsafe.CopyBlock(mappedMemory, gh.AddrOfPinnedObject().ToPointer(), (uint)size);
-        gh.Free();
+
+        copyDataFunc(data, (nint)mappedMemory);
+
         vkUnmapMemory(logicalDevice.Device, stagingBufferMemory);
 
         CopyBuffer(stagingBuffer, buffer, size);
@@ -50,7 +125,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         var commandPool = commandPoolFactory.CreateCommandPool(physicalDevice.QueueFamilyIndices.Transfer);
 
         var commandBuffer = commandBufferAllocator.AllocateCommandBuffer(commandPool: commandPool);
-        if(commandBuffer is not VulkanCommandBuffer vulkanCommandBuffer)
+        if (commandBuffer is not VulkanCommandBuffer vulkanCommandBuffer)
         {
             throw new InvalidOperationException("Failed to allocate command buffer!");
         }

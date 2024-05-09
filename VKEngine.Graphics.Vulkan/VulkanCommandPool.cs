@@ -13,7 +13,7 @@ internal sealed class VulkanCommandPool(IVulkanLogicalDevice logicalDevice, uint
         commandPoolCreateInfo.flags = VkCommandPoolCreateFlags.ResetCommandBuffer;
         commandPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
 
-        if(vkCreateCommandPool(logicalDevice.Device, &commandPoolCreateInfo, null, out commandPool) is not VkResult.Success)
+        if (vkCreateCommandPool(logicalDevice.Device, &commandPoolCreateInfo, null, out commandPool) is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to create command pool!");
         }
@@ -21,8 +21,6 @@ internal sealed class VulkanCommandPool(IVulkanLogicalDevice logicalDevice, uint
 
     public void Cleanup()
     {
-        vkDeviceWaitIdle(logicalDevice.Device);
-
         vkDestroyCommandPool(logicalDevice.Device, commandPool, IntPtr.Zero);
     }
 }
