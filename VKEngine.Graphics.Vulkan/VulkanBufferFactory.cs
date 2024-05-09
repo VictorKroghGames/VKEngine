@@ -6,22 +6,22 @@ namespace VKEngine.Graphics.Vulkan;
 
 internal sealed class VulkanBufferFactory(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator) : IBufferFactory
 {
-    public IBuffer CreateBuffer(ulong bufferSize, BufferUsageFlags usage, BufferMemoryPropertyFlags bufferMemoryPropertyFlags)
+    public IBuffer CreateBuffer(ulong bufferSize, BufferUsageFlags usage)
     {
-        var buffer = new VulkanBuffer(physicalDevice, logicalDevice, commandPoolFactory, commandBufferAllocator, bufferSize, usage, bufferMemoryPropertyFlags);
+        var buffer = new VulkanBuffer(physicalDevice, logicalDevice, commandPoolFactory, commandBufferAllocator, bufferSize, usage);
         buffer.Initialize();
         return buffer;
     }
 
-    public IBuffer CreateVertexBuffer(ulong bufferSize, BufferMemoryPropertyFlags bufferMemoryPropertyFlags)
+    public IBuffer CreateVertexBuffer(ulong bufferSize)
     {
-        return CreateBuffer(bufferSize, BufferUsageFlags.VertexBuffer, bufferMemoryPropertyFlags);
+        return CreateBuffer(bufferSize, BufferUsageFlags.VertexBuffer);
     }
 
-    public IBuffer CreateIndexBuffer<T>(uint indexCount, BufferMemoryPropertyFlags bufferMemoryPropertyFlags) where T : INumber<T>
+    public IBuffer CreateIndexBuffer<T>(uint indexCount) where T : INumber<T>
     {
         var bufferSize = (ulong)(indexCount * Unsafe.SizeOf<T>());
 
-        return CreateBuffer(bufferSize, BufferUsageFlags.IndexBuffer, bufferMemoryPropertyFlags);
+        return CreateBuffer(bufferSize, BufferUsageFlags.IndexBuffer);
     }
 }
