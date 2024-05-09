@@ -1,5 +1,4 @@
-﻿using System;
-using Vulkan;
+﻿using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
@@ -158,6 +157,21 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         }
 
         vkCmdBindIndexBuffer(commandBuffer, vulkanBuffer.buffer, 0, VkIndexType.Uint16);
+    }
+
+    public unsafe void BindDescriptorSet(IPipeline pipeline, IDescriptorSet descriptorSet)
+    {
+        if (pipeline is not VulkanPipeline vulkanPipeline)
+        {
+            throw new InvalidOperationException("Invalid pipeline type!");
+        }
+
+        if (descriptorSet is not VulkanDescriptorSet vulkanDescriptorSet)
+        {
+            throw new InvalidOperationException("Invalid descriptor set type!");
+        }
+
+        vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipelineLayout, 0, 1, ref vulkanDescriptorSet.descriptorSets[swapChain.CurrentFrameIndex], 0, null);
     }
 
     public unsafe void Draw()

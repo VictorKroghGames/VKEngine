@@ -6,6 +6,16 @@ internal sealed class ShaderLibrary(IShaderFactory shaderFactory) : IShaderLibra
 {
     private readonly IDictionary<string, IShader> shaders = new ConcurrentDictionary<string, IShader>();
 
+    public void Cleanup()
+    {
+        foreach (var shader in shaders.Values)
+        {
+            shader.Cleanup();
+        }
+
+        shaders.Clear();
+    }
+
     public IShader? Get(string name) => Get<IShader>(name);
 
     public TShader? Get<TShader>(string name) where TShader : IShader

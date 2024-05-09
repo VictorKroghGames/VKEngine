@@ -20,6 +20,11 @@ internal sealed class VulkanShader(IVulkanLogicalDevice vulkanLogicalDevice, str
                 continue;
             }
 
+            if (File.Exists(shaderModuleSpecification.FilePath) is false)
+            {
+                throw new FileNotFoundException($"Shader module file not found: {shaderModuleSpecification.FilePath}");
+            }
+
             var shaderModule = CreateShader(shaderModuleSpecification.FilePath);
             shaderModules.TryAdd(shaderModuleSpecification.Type, new VulkanShaderModule
             {
