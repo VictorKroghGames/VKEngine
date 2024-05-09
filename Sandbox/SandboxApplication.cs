@@ -66,7 +66,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
             RenderPass = renderPass
         });
 
-        var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(4 * Unsafe.SizeOf<Vertex>()), BufferMemoryPropertyFlags.HostVisible | BufferMemoryPropertyFlags.HostCoherent);
+        var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(4 * Unsafe.SizeOf<Vertex>()));
 
         vertexBuffer.SetData([
             new Vertex(new Vector2(-0.5f, -0.5f), new Vector3(1.0f, 0.0f, 0.0f)),
@@ -75,7 +75,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IGraphics
             new Vertex(new Vector2(-0.5f,  0.5f), new Vector3(1.0f, 1.0f, 1.0f)),
         ]);
 
-        var indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(6, BufferMemoryPropertyFlags.HostVisible | BufferMemoryPropertyFlags.HostCoherent);
+        var indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(6);
 
         indexBuffer.SetData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
