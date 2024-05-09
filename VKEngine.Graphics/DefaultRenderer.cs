@@ -54,7 +54,7 @@ internal class DefaultRenderer(IGraphicsConfiguration graphicsConfiguration, IGr
         graphicsContext.Wait();
     }
 
-    public void Draw(IRenderPass renderPass, IPipeline pipeline, IBuffer vertexBuffer, IBuffer indexBuffer)
+    public void Draw(IRenderPass renderPass, IPipeline pipeline, IBuffer vertexBuffer, IBuffer indexBuffer, IDescriptorSet descriptorSet)
     {
         currentFrameCommandBuffer.BeginRenderPass(renderPass);
 
@@ -63,6 +63,8 @@ internal class DefaultRenderer(IGraphicsConfiguration graphicsConfiguration, IGr
         currentFrameCommandBuffer.BindVertexBuffer(vertexBuffer);
 
         currentFrameCommandBuffer.BindIndexBuffer(indexBuffer);
+
+        currentFrameCommandBuffer.BindDescritporSet(pipeline, descriptorSet);
 
         currentFrameCommandBuffer.DrawIndex(6);
 

@@ -6,7 +6,7 @@ using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -56,6 +56,18 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_uniform_buffer.frag.spv"), ShaderModuleType.Fragment)
         );
 
+        var uniformBufferData = new UniformBufferObject
+        {
+            Model = Matrix4x4.Identity,
+            View = Matrix4x4.CreateTranslation(0.0f, 0.0f, -2.0f),
+            Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f)
+        };
+
+        var uniformBuffer = bufferFactory.CreateUniformBuffer<UniformBufferObject>();
+        uniformBuffer.UploadData(ref uniformBufferData);
+
+        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer);
+
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {
             CullMode = CullMode.Back,
@@ -66,7 +78,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
                                     new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)Unsafe.SizeOf<Vector2>())   // COLOR
                             ),
             RenderPass = renderPass
-        });
+        }, descriptorSet);
 
         var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(4 * Unsafe.SizeOf<Vertex>()));
 
@@ -81,17 +93,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         indexBuffer.UploadData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
-        var uniformBufferData = new UniformBufferObject
-        {
-            Model = Matrix4x4.Identity,
-            View = Matrix4x4.CreateTranslation(0.0f, 0.0f, -2.0f),
-            Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f)
-        };
-
-        var uniformBuffer = bufferFactory.CreateUniformBuffer<UniformBufferObject>();
-        uniformBuffer.UploadData(ref uniformBufferData);
-
-        pipeline.AddDescriptorSet<UniformBufferObject>(uniformBuffer);
+        //pipeline.AddDescriptorSet<UniformBufferObject>(uniformBuffer);
 
         while (isRunning)
         {
@@ -119,7 +121,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             }
 
             renderer.BeginFrame();
-            renderer.Draw(renderPass, pipeline, vertexBuffer, indexBuffer);
+            renderer.Draw(renderPass, pipeline, vertexBuffer, indexBuffer, descriptorSet);
             renderer.EndFrame();
 
             renderer.Render();
@@ -134,6 +136,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         uniformBuffer.Cleanup();
         indexBuffer.Cleanup();
         vertexBuffer.Cleanup();
+
+        descriptorSet.Cleanup();
 
         pipeline.Cleanup();
 

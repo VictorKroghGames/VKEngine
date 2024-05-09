@@ -129,7 +129,7 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         vkCmdEndRenderPass(commandBuffer);
     }
 
-    public unsafe void BindPipeline(IPipeline pipeline)
+    public void BindPipeline(IPipeline pipeline)
     {
         if (pipeline is not VulkanPipeline vulkanPipeline)
         {
@@ -137,8 +137,6 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         }
 
         vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipeline);
-
-        vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipelineLayout, 0, 1, ref vulkanPipeline.descriptorSet, 0, null);
     }
 
     public unsafe void BindVertexBuffer(IBuffer buffer)
@@ -160,6 +158,21 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         }
 
         vkCmdBindIndexBuffer(commandBuffer, vulkanBuffer.buffer, 0, VkIndexType.Uint16);
+    }
+
+    public unsafe void BindDescritporSet(IPipeline pipeline, IDescriptorSet descriptorSet)
+    {
+        if (pipeline is not VulkanPipeline vulkanPipeline)
+        {
+            throw new InvalidOperationException("Invalid pipeline type!");
+        }
+
+        if (descriptorSet is not VulkanDescriptorSet vulkanDescriptorSet)
+        {
+            throw new InvalidOperationException("Invalid descriptor set type!");
+        }
+
+        vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipelineLayout, 0, 1, ref vulkanDescriptorSet.descriptorSet, 0, null);
     }
 
     public unsafe void Draw()

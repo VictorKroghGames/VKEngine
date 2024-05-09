@@ -11,5 +11,5 @@ public interface IRenderer
 
     void Wait();
 
-    void Draw(IRenderPass renderPass, IPipeline pipeline, IBuffer vertexBuffer, IBuffer indexBuffer);
+    void Draw(IRenderPass renderPass, IPipeline pipeline, IBuffer vertexBuffer, IBuffer indexBuffer, IDescriptorSet descriptorSet);
 }
