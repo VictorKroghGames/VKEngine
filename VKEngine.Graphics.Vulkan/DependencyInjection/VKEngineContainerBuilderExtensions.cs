@@ -22,6 +22,7 @@ public static class VKEngineContainerBuilderExtensions
         containerBuilder.Services.AddSingleton<IBufferFactory, VulkanBufferFactory>();
         containerBuilder.Services.AddSingleton<IDescriptorSetFactory, VulkanDescriptorSetFactory>();
         containerBuilder.Services.AddSingleton<IImageFactory, VulkanImageFactory>();
+        containerBuilder.Services.AddSingleton<ITextureFactory, VulkanTextureFactory>();
 
         containerBuilder.Services.AddSingleton<ITestRenderer, VulkanTutorial>();
 
