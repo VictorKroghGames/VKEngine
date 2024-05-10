@@ -25,6 +25,12 @@
     <None Update="libs\glfw3.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="shaders\khronos_vulkan_texture.frag.spv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="shaders\khronos_vulkan_texture.vert.spv">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="shaders\khronos_vulkan_tutorial.frag.spv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
