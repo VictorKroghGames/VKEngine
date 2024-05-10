@@ -2,8 +2,8 @@
 
 public interface IDescriptorSetFactory
 {
-    IDescriptorSet CreateDescriptorSet<T>(IBuffer buffer);
-    IDescriptorSet CreateDescriptorSet<T>(uint maxSets, IBuffer buffer);
+    IDescriptorSet CreateDescriptorSet<T>(IBuffer buffer, ITexture texture);
+    IDescriptorSet CreateDescriptorSet<T>(uint maxSets, IBuffer buffer, ITexture texture);
 }
 
 public interface IDescriptorSet
