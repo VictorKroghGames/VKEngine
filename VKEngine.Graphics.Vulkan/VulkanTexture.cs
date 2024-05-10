@@ -14,23 +14,23 @@ internal sealed class VulkanTextureFactory(IVulkanLogicalDevice logicalDevice, I
 
         var image = imageFactory.CreateImageFromFile(filepath);
 
-        return CreateTextureFromImage(image);
+        return CreateTextureFromImage(image, true);
     }
 
-    public ITexture CreateTextureFromImage(IImage image)
+    public ITexture CreateTextureFromImage(IImage image, bool disposeImage = true)
     {
         if (image is not VulkanImage vulkanImage)
         {
             throw new InvalidOperationException("Invalid image type!");
         }
 
-        var texture = new VulkanTexture(logicalDevice, vulkanImage);
+        var texture = new VulkanTexture(logicalDevice, vulkanImage, disposeImage);
         texture.Initialize();
         return texture;
     }
 }
 
-internal sealed class VulkanTexture(IVulkanLogicalDevice logicalDevice, IImage image) : ITexture
+internal sealed class VulkanTexture(IVulkanLogicalDevice logicalDevice, IImage image, bool disposeImage) : ITexture
 {
     internal VkSampler sampler;
 
@@ -67,7 +67,10 @@ internal sealed class VulkanTexture(IVulkanLogicalDevice logicalDevice, IImage i
     {
         vkDestroySampler(logicalDevice.Device, sampler, IntPtr.Zero);
 
-        image.Cleanup();
+        if (disposeImage)
+        {
+            image.Cleanup();
+        }
     }
 
     internal VkDescriptorImageInfo GetDescriptorImageInfo()
