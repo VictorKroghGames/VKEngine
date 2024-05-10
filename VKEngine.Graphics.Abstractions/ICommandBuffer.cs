@@ -1,10 +1,12 @@
-﻿namespace VKEngine.Graphics;
+﻿using VKEngine.Graphics.Enumerations;
+
+namespace VKEngine.Graphics;
 
 public interface ICommandBuffer
 {
     void Cleanup();
 
-    void Begin();
+    void Begin(CommandBufferUsageFlags flags = CommandBufferUsageFlags.None);
     void End();
     void Submit();
 

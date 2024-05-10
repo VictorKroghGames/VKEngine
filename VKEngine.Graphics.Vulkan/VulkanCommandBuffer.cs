@@ -1,4 +1,5 @@
-﻿using Vulkan;
+﻿using VKEngine.Graphics.Enumerations;
+using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
@@ -12,7 +13,7 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
     {
     }
 
-    public unsafe void Begin()
+    public unsafe void Begin(CommandBufferUsageFlags flags = CommandBufferUsageFlags.None)
     {
         if (vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags.None) is not VkResult.Success)
         {
@@ -20,6 +21,7 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         }
 
         var commandBufferBeginInfo = VkCommandBufferBeginInfo.New();
+        commandBufferBeginInfo.flags = (VkCommandBufferUsageFlags)flags;
 
         if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) is not VkResult.Success)
         {
