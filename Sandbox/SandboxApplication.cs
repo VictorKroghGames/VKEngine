@@ -6,16 +6,17 @@ using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, IImageFactory imageFactory, ITextureFactory textureFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
     private bool isRunning = true;
 
-    internal readonly struct Vertex(Vector2 position, Vector3 color)
+    internal readonly struct Vertex(Vector2 position, Vector3 color, Vector2 texCoord)
     {
         public readonly Vector2 Position = position;
         public readonly Vector3 Color = color;
+        public readonly Vector2 TexCoord = texCoord;
     }
 
     internal struct UniformBufferObject
@@ -56,6 +57,11 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_uniform_buffer.frag.spv"), ShaderModuleType.Fragment)
         );
 
+        shaderLibrary.Load("khronos_vulkan_texture",
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_texture.vert.spv"), ShaderModuleType.Vertex),
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_texture.frag.spv"), ShaderModuleType.Fragment)
+        );
+
         var uniformBufferData = new UniformBufferObject
         {
             Model = Matrix4x4.Identity,
@@ -66,16 +72,19 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         var uniformBuffer = bufferFactory.CreateUniformBuffer<UniformBufferObject>();
         uniformBuffer.UploadData(ref uniformBufferData);
 
-        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer);
+        var texture = textureFactory.CreateFromImage(imageFactory.CreateImageFromFile(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg")));
+
+        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, texture);
 
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {
             CullMode = CullMode.Back,
             FrontFace = FrontFace.CounterClockwise,
-            Shader = shaderLibrary.Get("khronos_vulkan_uniform_buffer") ?? throw new InvalidOperationException("Shader not found!"),
+            Shader = shaderLibrary.Get("khronos_vulkan_texture") ?? throw new InvalidOperationException("Shader not found!"),
             PipelineLayout = new PipelineLayout(0, (uint)Unsafe.SizeOf<Vertex>(), VertexInputRate.Vertex,
                                     new PipelineLayoutVertexAttribute(0, 0, Format.R32g32Sfloat, 0),  // POSITION
-                                    new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)Unsafe.SizeOf<Vector2>())   // COLOR
+                                    new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)Unsafe.SizeOf<Vector2>()),   // COLOR
+                                    new PipelineLayoutVertexAttribute(0, 2, Format.R32g32Sfloat, (uint)(Unsafe.SizeOf<Vector2>() + Unsafe.SizeOf<Vector3>()))   // COLOR
                             ),
             RenderPass = renderPass
         }, descriptorSet);
@@ -83,10 +92,10 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(4 * Unsafe.SizeOf<Vertex>()));
 
         vertexBuffer.UploadData([
-            new Vertex(new Vector2(-0.5f, -0.5f), new Vector3(1.0f, 0.0f, 0.0f)),
-            new Vertex(new Vector2( 0.5f, -0.5f), new Vector3(0.0f, 1.0f, 0.0f)),
-            new Vertex(new Vector2( 0.5f,  0.5f), new Vector3(0.0f, 0.0f, 1.0f)),
-            new Vertex(new Vector2(-0.5f,  0.5f), new Vector3(1.0f, 1.0f, 1.0f)),
+            new Vertex(new Vector2(-0.5f, -0.5f), new Vector3(1.0f, 0.0f, 0.0f), new Vector2(1.0f, 0.0f)),
+            new Vertex(new Vector2( 0.5f, -0.5f), new Vector3(0.0f, 1.0f, 0.0f), new Vector2(0.0f, 0.0f)),
+            new Vertex(new Vector2( 0.5f,  0.5f), new Vector3(0.0f, 0.0f, 1.0f), new Vector2(0.0f, 1.0f)),
+            new Vertex(new Vector2(-0.5f,  0.5f), new Vector3(1.0f, 1.0f, 1.0f), new Vector2(1.0f, 1.0f)),
         ]);
 
         var indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(6);
@@ -130,6 +139,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         }
 
         renderer.Wait();
+
+        texture.Cleanup();
 
         uniformBuffer.Cleanup();
         indexBuffer.Cleanup();
