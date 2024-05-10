@@ -141,7 +141,7 @@ internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfigu
             //writeDescriptorSet.descriptorCount = 1;
             //writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
 
-            fixed(VkWriteDescriptorSet* writeDescriptorSet = &writeDescriptorSets[0])
+            fixed (VkWriteDescriptorSet* writeDescriptorSet = &writeDescriptorSets[0])
             {
                 vkUpdateDescriptorSets(logicalDevice.Device, (uint)writeDescriptorSets.Length, writeDescriptorSet, 0, null);
             }
