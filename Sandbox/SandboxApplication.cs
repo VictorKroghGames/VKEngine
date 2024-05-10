@@ -4,9 +4,10 @@ using System.Runtime.CompilerServices;
 using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
+using VKEngine.Graphics.ImGui;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, IImGuiRenderer imGuiRenderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -43,6 +44,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         renderer.Initialize();
 
+        imGuiRenderer.Initialize();
+
         var renderPass = renderPassFactory.CreateRenderPass();
 
         swapChain.Initialize(renderPass);
@@ -69,12 +72,16 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f)
         };
 
+        var projection = uniformBufferData.Projection;
+        projection.M11 *= -1;
+        uniformBufferData.Projection = projection;
+
         var uniformBuffer = bufferFactory.CreateUniformBuffer<UniformBufferObject>();
         uniformBuffer.UploadData(ref uniformBufferData);
 
-        var texture = textureFactory.CreateTextureFromFilePath(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg"));
+        //var texture = textureFactory.CreateTextureFromFilePath(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg"));
 
-        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, texture);
+        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, imGuiRenderer.FontTexture);
 
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {
@@ -102,6 +109,18 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         indexBuffer.UploadData(new ushort[] { 0, 1, 2, 2, 3, 0 });
 
+        //{
+        //    //uniformBufferData.Model = Matrix4x4.CreateRotationZ((float)DateTime.Now.TimeOfDay.TotalSeconds);
+        //    uniformBufferData.View = Matrix4x4.CreateTranslation(0.0f, 0.0f, -2.0f);
+        //    uniformBufferData.Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f);
+
+        //    var projection = uniformBufferData.Projection;
+        //    projection.M11 *= -1;
+        //    uniformBufferData.Projection = projection;
+
+        //    uniformBuffer.UploadData(ref uniformBufferData);
+        //}
+
         while (isRunning)
         {
             if (input.IsKeyPressed(KeyCodes.A))
@@ -115,17 +134,17 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             }
 
             // Update uniform buffer
-            {
-                uniformBufferData.Model = Matrix4x4.CreateRotationZ((float)DateTime.Now.TimeOfDay.TotalSeconds);
-                uniformBufferData.View = Matrix4x4.CreateTranslation(0.0f, 0.0f, -2.0f);
-                uniformBufferData.Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f);
+            //{
+            //    uniformBufferData.Model = Matrix4x4.CreateRotationZ((float)DateTime.Now.TimeOfDay.TotalSeconds);
+            //    uniformBufferData.View = Matrix4x4.CreateTranslation(0.0f, 0.0f, -2.0f);
+            //    uniformBufferData.Projection = Matrix4x4.CreatePerspectiveFieldOfView((float)Math.PI / 4, window.Width / (float)window.Height, 0.1f, 10.0f);
 
-                var projection = uniformBufferData.Projection;
-                projection.M11 *= -1;
-                uniformBufferData.Projection = projection;
+            //    var projection = uniformBufferData.Projection;
+            //    projection.M11 *= -1;
+            //    uniformBufferData.Projection = projection;
 
-                uniformBuffer.UploadData(ref uniformBufferData);
-            }
+            //    uniformBuffer.UploadData(ref uniformBufferData);
+            //}
 
             renderer.BeginFrame();
             renderer.Draw(renderPass, pipeline, vertexBuffer, indexBuffer, descriptorSet);
@@ -140,7 +159,8 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         renderer.Wait();
 
-        texture.Cleanup();
+        //texture.Cleanup();
+        imGuiRenderer.Cleanup();
 
         uniformBuffer.Cleanup();
         indexBuffer.Cleanup();
