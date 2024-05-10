@@ -107,12 +107,7 @@ internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfigu
                 range = (ulong)Unsafe.SizeOf<T>()
             };
 
-            var descriptorImageInfo = new VkDescriptorImageInfo
-            {
-                sampler = vulkanTexture.sampler,
-                imageView = ((VulkanImage)vulkanTexture.Image).imageView,
-                imageLayout = VkImageLayout.ShaderReadOnlyOptimal
-            };
+            var descriptorImageInfo = vulkanTexture.GetDescriptorImageInfo();
 
             var writeDescriptorSets = new VkWriteDescriptorSet[]
             {

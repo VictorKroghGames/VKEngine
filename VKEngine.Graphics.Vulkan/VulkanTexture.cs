@@ -22,8 +22,6 @@ internal sealed class VulkanTexture(IVulkanLogicalDevice logicalDevice, IImage i
 {
     internal VkSampler sampler;
 
-    internal IImage Image => image;
-
     internal unsafe void Initialize()
     {
         // create sampler
@@ -58,5 +56,20 @@ internal sealed class VulkanTexture(IVulkanLogicalDevice logicalDevice, IImage i
         vkDestroySampler(logicalDevice.Device, sampler, IntPtr.Zero);
 
         image.Cleanup();
+    }
+
+    internal VkDescriptorImageInfo GetDescriptorImageInfo()
+    {
+        if (image is not VulkanImage vulkanImage)
+        {
+            throw new InvalidOperationException("Invalid image type!");
+        }
+
+        return new VkDescriptorImageInfo
+        {
+            sampler = sampler,
+            imageView = vulkanImage.imageView,
+            imageLayout = VkImageLayout.ShaderReadOnlyOptimal
+        };
     }
 }
