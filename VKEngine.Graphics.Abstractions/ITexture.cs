@@ -2,7 +2,8 @@
 
 public interface ITextureFactory
 {
-    ITexture CreateFromImage(IImage image);
+    ITexture CreateTextureFromFilePath(string filepath);
+    ITexture CreateTextureFromImage(IImage image);
 }
 
 public interface ITexture

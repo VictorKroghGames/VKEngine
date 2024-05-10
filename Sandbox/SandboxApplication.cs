@@ -6,7 +6,7 @@ using VKEngine.Graphics;
 using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, IImageFactory imageFactory, ITextureFactory textureFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -72,7 +72,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         var uniformBuffer = bufferFactory.CreateUniformBuffer<UniformBufferObject>();
         uniformBuffer.UploadData(ref uniformBufferData);
 
-        var texture = textureFactory.CreateFromImage(imageFactory.CreateImageFromFile(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg")));
+        var texture = textureFactory.CreateTextureFromFilePath(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg"));
 
         var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, texture);
 

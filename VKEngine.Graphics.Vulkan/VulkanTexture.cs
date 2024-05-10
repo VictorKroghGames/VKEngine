@@ -3,9 +3,21 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanTextureFactory(IVulkanLogicalDevice logicalDevice) : ITextureFactory
+internal sealed class VulkanTextureFactory(IVulkanLogicalDevice logicalDevice, IImageFactory imageFactory) : ITextureFactory
 {
-    public ITexture CreateFromImage(IImage image)
+    public ITexture CreateTextureFromFilePath(string filepath)
+    {
+        if (!File.Exists(filepath))
+        {
+            throw new FileNotFoundException("File not found!", filepath);
+        }
+
+        var image = imageFactory.CreateImageFromFile(filepath);
+
+        return CreateTextureFromImage(image);
+    }
+
+    public ITexture CreateTextureFromImage(IImage image)
     {
         if (image is not VulkanImage vulkanImage)
         {
