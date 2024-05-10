@@ -1,5 +1,6 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Vulkan;
@@ -9,10 +10,26 @@ namespace VKEngine.Graphics.Vulkan;
 
 internal sealed class VulkanImageFactory(IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, ICommandPoolFactory commandPoolFactory, ICommandBufferAllocator commandBufferAllocator) : IImageFactory
 {
-    public IImage CreateImageFromFile(string filepath)
+    public unsafe IImage CreateImageFromFile(string filepath)
+    {
+        Image<Rgba32> fileImage;
+        using (var fs = File.OpenRead(filepath))
+        {
+            fileImage = Image.Load<Rgba32>(fs);
+        }
+        ulong imageSize = (ulong)(fileImage.Width * fileImage.Height * Unsafe.SizeOf<Rgba32>());
+
+        var buffer = new byte[imageSize];
+        fileImage.CopyPixelDataTo(buffer);
+        var image = CreateImageFromMemory(fileImage.Width, fileImage.Height, (nint)Unsafe.AsPointer(ref buffer[0]), (uint)imageSize);
+
+        return image;
+    }
+
+    public IImage CreateImageFromMemory(int width, int height, IntPtr data, uint size)
     {
         var image = new VulkanImage(physicalDevice, logicalDevice, commandPoolFactory, commandBufferAllocator);
-        image.Initialize(filepath);
+        image.Initialize(width, height, data, size);
         return image;
     }
 }
@@ -23,31 +40,16 @@ internal sealed class VulkanImage(IVulkanPhysicalDevice physicalDevice, IVulkanL
     internal VkImageView imageView = VkImageView.Null;
     private VkDeviceMemory imageMemory = VkDeviceMemory.Null;
 
-    internal unsafe void Initialize(string filepath)
+    internal unsafe void Initialize(int width, int height, IntPtr data, uint size)
     {
-        Image<Rgba32> fileImage;
-        using (var fs = File.OpenRead(filepath))
-        {
-            fileImage = Image.Load<Rgba32>(fs);
-        }
-        ulong imageSize = (ulong)(fileImage.Width * fileImage.Height * Unsafe.SizeOf<Rgba32>());
-
-        var width = fileImage.Width;
-        var height = fileImage.Height;
-
-        // Create staging buffer
-        CreateBuffer(imageSize, VkBufferUsageFlags.TransferSrc, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, out var stagingBuffer, out var stagingBufferMemory);
+        CreateBuffer(size, VkBufferUsageFlags.TransferSrc, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, out var stagingBuffer, out var stagingBufferMemory);
 
         void* mappedMemory;
-        vkMapMemory(logicalDevice.Device, stagingBufferMemory, 0, imageSize, 0, &mappedMemory);
-
-        fileImage.CopyPixelDataTo(MemoryMarshal.Cast<byte, Rgba32>(new Span<byte>(mappedMemory, (int)imageSize)));
-
+        vkMapMemory(logicalDevice.Device, stagingBufferMemory, 0, size, 0, &mappedMemory);
+        Unsafe.CopyBlock(mappedMemory, data.ToPointer(), size);
         vkUnmapMemory(logicalDevice.Device, stagingBufferMemory);
 
-        fileImage.Dispose();
-
-        CreateImage(fileImage.Width, fileImage.Height, VkFormat.R8g8b8a8Unorm, VkImageTiling.Optimal, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal);
+        CreateImage(width, height, VkFormat.R8g8b8a8Unorm, VkImageTiling.Optimal, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal);
 
         TransitionImageLayout(image, VkFormat.R8g8b8a8Unorm, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal);
         CopyBufferToImage(stagingBuffer, image, (uint)width, (uint)height);

@@ -28,6 +28,13 @@ internal sealed class VulkanTextureFactory(IVulkanLogicalDevice logicalDevice, I
         texture.Initialize();
         return texture;
     }
+
+    public ITexture CreateTextureFromMemory(int width, int height, nint data, uint size)
+    {
+        var image = imageFactory.CreateImageFromMemory(width, height, data, size);
+
+        return CreateTextureFromImage(image, true);
+    }
 }
 
 internal sealed class VulkanTexture(IVulkanLogicalDevice logicalDevice, IImage image, bool disposeImage) : ITexture
