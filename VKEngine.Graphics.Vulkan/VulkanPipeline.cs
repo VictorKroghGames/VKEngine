@@ -19,13 +19,8 @@ internal sealed class VulkanPipelineFactory(IGraphicsConfiguration graphicsConfi
             throw new InvalidOperationException("Invalid shader type!");
         }
 
-        if (pipelineDescription.RenderPass is not VulkanRenderPass vulkanRenderPass)
-        {
-            throw new InvalidOperationException("Invalid render pass type!");
-        }
-
         var vulkanPipeline = new VulkanPipeline(graphicsConfiguration, logicalDevice);
-        vulkanPipeline.Initialize(pipelineDescription, vulkanSwapChain, vulkanShader, vulkanRenderPass);
+        vulkanPipeline.Initialize(pipelineDescription, vulkanSwapChain, vulkanShader);
         return vulkanPipeline;
     }
 }
@@ -35,7 +30,7 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
     internal VkPipeline pipeline;
     internal VkPipelineLayout pipelineLayout;
 
-    internal unsafe void Initialize(PipelineDescription description, VulkanSwapChain swapChain, VulkanShader shader, VulkanRenderPass renderPass)
+    internal unsafe void Initialize(PipelineDescription description, VulkanSwapChain swapChain, VulkanShader shader)
     {
         // SHADERS
         var shaderModules = shader.GetShaderModules().ToArray();
@@ -177,7 +172,7 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
         graphicsPipelineCreateInfo.pDynamicState = &pipelineDynamicStateCreateInfo;
         graphicsPipelineCreateInfo.layout = pipelineLayout;
 
-        graphicsPipelineCreateInfo.renderPass = renderPass.renderPass;
+        graphicsPipelineCreateInfo.renderPass = (swapChain.RenderPass as VulkanRenderPass)!.renderPass;
         graphicsPipelineCreateInfo.subpass = 0;
         graphicsPipelineCreateInfo.basePipelineHandle = VkPipeline.Null;
         graphicsPipelineCreateInfo.basePipelineIndex = -1;
