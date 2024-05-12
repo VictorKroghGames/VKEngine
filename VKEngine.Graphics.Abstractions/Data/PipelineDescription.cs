@@ -1,6 +1,4 @@
-﻿using VKEngine.Graphics.Enumerations;
-
-namespace VKEngine.Graphics;
+﻿namespace VKEngine.Graphics;
 
 public readonly struct PipelineDescription
 {
