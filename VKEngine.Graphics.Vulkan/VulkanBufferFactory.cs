@@ -1,6 +1,5 @@
 ﻿using System.Numerics;
 using System.Runtime.CompilerServices;
-using VKEngine.Graphics.Enumerations;
 
 namespace VKEngine.Graphics.Vulkan;
 

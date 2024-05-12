@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using VKEngine.Graphics.Enumerations;
 
 namespace VKEngine.Graphics;
 
