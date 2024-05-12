@@ -3,7 +3,6 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using VKEngine;
 using VKEngine.Graphics;
-using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
 internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
