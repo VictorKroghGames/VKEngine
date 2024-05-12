@@ -52,7 +52,7 @@ internal partial class GLFW
         [LibraryImport(LibraryName, EntryPoint = "glfwGetKey")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         [return: MarshalAs(UnmanagedType.I4)]
-        public static partial int glfwGetKey(IntPtr window, [MarshalAs(UnmanagedType.I4)] int key);
+        internal static partial int glfwGetKey(IntPtr window, [MarshalAs(UnmanagedType.I4)] int key);
 
         [LibraryImport(LibraryName, EntryPoint = "glfwGetRequiredInstanceExtensions")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
