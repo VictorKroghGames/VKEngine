@@ -1,15 +1,28 @@
-#version 450 core
-layout(location = 0) in vec2 aPos;
-layout(location = 1) in vec2 aUV;
-layout(location = 2) in vec4 aColor;
-layout(push_constant) uniform uPushConstant { vec2 uScale; vec2 uTranslate; } pc;
+#version 450
 
-out gl_PerVertex { vec4 gl_Position; };
-layout(location = 0) out struct { vec4 Color; vec2 UV; } Out;
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
 
-void main()
+layout (location = 0) in vec2 in_position;
+layout (location = 1) in vec2 in_texCoord;
+layout (location = 2) in vec4 in_color;
+
+layout (binding = 0) uniform ProjectionMatrixBuffer
 {
-    Out.Color = aColor;
-    Out.UV = aUV;
-    gl_Position = vec4(aPos * pc.uScale + pc.uTranslate, 0, 1);
+    mat4 projection_matrix;
+};
+
+layout (location = 0) out vec4 color;
+layout (location = 1) out vec2 texCoord;
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+void main() 
+{
+    gl_Position = projection_matrix * vec4(in_position, 0, 1);
+    color = in_color;
+    texCoord = in_texCoord;
 }

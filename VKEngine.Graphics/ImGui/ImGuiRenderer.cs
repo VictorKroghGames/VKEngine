@@ -41,7 +41,7 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
         io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable | ImGuiConfigFlags.ViewportsEnable;
 
-        //CreateDeviceResources();
+        CreateDeviceResources();
 
         SetPerFrameImGuiData(1.0f / 60.0f);
     }
