@@ -9,6 +9,7 @@ namespace VKEngine.Graphics.ImGui;
 public interface IImGuiRenderer
 {
     void Initialize();
+    void Cleanup();
 
     void Begin();
     void End();
@@ -40,9 +41,13 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
         io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
         io.ConfigFlags |= ImGuiConfigFlags.DockingEnable | ImGuiConfigFlags.ViewportsEnable;
 
-        CreateDeviceResources();
+        //CreateDeviceResources();
 
         SetPerFrameImGuiData(1.0f / 60.0f);
+    }
+
+    public void Cleanup()
+    {
     }
 
     public void Begin()

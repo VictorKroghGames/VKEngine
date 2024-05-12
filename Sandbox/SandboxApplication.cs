@@ -79,9 +79,9 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         var uniformBuffer = bufferFactory.CreateUniformBuffer<UniformBufferObject>();
         uniformBuffer.UploadData(ref uniformBufferData);
 
-        //var texture = textureFactory.CreateTextureFromFilePath(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg"));
+        var texture = textureFactory.CreateTextureFromFilePath(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg"));
 
-        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, imGuiRenderer.FontTexture);
+        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, texture);
 
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {
@@ -159,7 +159,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         renderer.Wait();
 
-        //texture.Cleanup();
+        texture.Cleanup();
         imGuiRenderer.Cleanup();
 
         uniformBuffer.Cleanup();
