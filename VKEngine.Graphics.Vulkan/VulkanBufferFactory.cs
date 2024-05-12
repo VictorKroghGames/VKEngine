@@ -18,11 +18,16 @@ internal sealed class VulkanBufferFactory(IVulkanPhysicalDevice physicalDevice, 
         return CreateBuffer(bufferSize, BufferUsageFlags.VertexBuffer | BufferUsageFlags.TransferDst, BufferMemoryPropertyFlags.DeviceLocal);
     }
 
+    public IBuffer CreateIndexBuffer(ulong bufferSize)
+    {
+        return CreateBuffer(bufferSize, BufferUsageFlags.IndexBuffer | BufferUsageFlags.TransferDst, BufferMemoryPropertyFlags.DeviceLocal);
+    }
+
     public IBuffer CreateIndexBuffer<T>(uint indexCount) where T : INumber<T>
     {
         var bufferSize = (ulong)(indexCount * Unsafe.SizeOf<T>());
 
-        return CreateBuffer(bufferSize, BufferUsageFlags.IndexBuffer | BufferUsageFlags.TransferDst, BufferMemoryPropertyFlags.DeviceLocal);
+        return CreateIndexBuffer(bufferSize);
     }
 
     public IBuffer CreateUniformBuffer<T>()
