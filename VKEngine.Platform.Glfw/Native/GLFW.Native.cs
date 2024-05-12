@@ -11,15 +11,15 @@ internal partial class GLFW
         [LibraryImport(LibraryName, EntryPoint = "glfwInit")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool glfwInit();
+        internal static partial bool glfwInit();
 
         [LibraryImport(LibraryName, EntryPoint = "glfwTerminate")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial void glfwTerminate();
+        internal static partial void glfwTerminate();
 
         [LibraryImport(LibraryName, EntryPoint = "glfwCreateWindow")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial IntPtr glfwCreateWindow(
+        internal static partial IntPtr glfwCreateWindow(
             [MarshalAs(UnmanagedType.I4)] int width,
             [MarshalAs(UnmanagedType.I4)] int height,
             [MarshalAs(UnmanagedType.LPStr)] string title,
@@ -28,26 +28,26 @@ internal partial class GLFW
 
         [LibraryImport(LibraryName, EntryPoint = "glfwMakeContextCurrent")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial void glfwMakeContextCurrent(
+        internal static partial void glfwMakeContextCurrent(
             IntPtr window);
 
         [LibraryImport(LibraryName, EntryPoint = "glfwWindowShouldClose")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool glfwWindowShouldClose(
+        internal static partial bool glfwWindowShouldClose(
             IntPtr window);
 
         [LibraryImport(LibraryName, EntryPoint = "glfwSwapBuffers")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial void glfwSwapBuffers(IntPtr window);
+        internal static partial void glfwSwapBuffers(IntPtr window);
 
         [LibraryImport(LibraryName, EntryPoint = "glfwPollEvents")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial void glfwPollEvents();
+        internal static partial void glfwPollEvents();
 
         [LibraryImport(LibraryName, EntryPoint = "glfwWindowHint")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial void glfwWindowHint([MarshalAs(UnmanagedType.I4)] int hint, [MarshalAs(UnmanagedType.I4)] int value);
+        internal static partial void glfwWindowHint([MarshalAs(UnmanagedType.I4)] int hint, [MarshalAs(UnmanagedType.I4)] int value);
 
         [LibraryImport(LibraryName, EntryPoint = "glfwGetKey")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
