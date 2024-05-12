@@ -3,7 +3,6 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using VKEngine;
 using VKEngine.Graphics;
-using VKEngine.Graphics.Enumerations;
 using VKEngine.Platform;
 
 internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
@@ -76,18 +75,22 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, texture);
 
-        var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
+        var vertexLayout = new VertexLayout(
+            new VertexLayoutAttribute("inPosition", Format.R32g32Sfloat),
+            new VertexLayoutAttribute("inColor", Format.R32g32b32Sfloat),
+            new VertexLayoutAttribute("inTexCoord", Format.R32g32Sfloat)
+        );
+
+        var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineDescription
         {
+            Shader = shaderLibrary.Get("khronos_vulkan_texture") ?? throw new InvalidOperationException("Shader not found!"),
+            VertexLayouts = [vertexLayout],
+            PrimitiveTopology = PrimitiveTopology.TriangleList,
             CullMode = CullMode.Back,
             FrontFace = FrontFace.CounterClockwise,
-            Shader = shaderLibrary.Get("khronos_vulkan_texture") ?? throw new InvalidOperationException("Shader not found!"),
-            PipelineLayout = new PipelineLayout(0, (uint)Unsafe.SizeOf<Vertex>(), VertexInputRate.Vertex,
-                                    new PipelineLayoutVertexAttribute(0, 0, Format.R32g32Sfloat, 0),  // POSITION
-                                    new PipelineLayoutVertexAttribute(0, 1, Format.R32g32b32Sfloat, (uint)Unsafe.SizeOf<Vector2>()),   // COLOR
-                                    new PipelineLayoutVertexAttribute(0, 2, Format.R32g32Sfloat, (uint)(Unsafe.SizeOf<Vector2>() + Unsafe.SizeOf<Vector3>()))   // COLOR
-                            ),
+            DescriptorSets = [descriptorSet],
             RenderPass = renderPass
-        }, descriptorSet);
+        });
 
         var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(4 * Unsafe.SizeOf<Vertex>()));
 

@@ -1,4 +1,5 @@
 ﻿using VKEngine.Configuration;
+using VKEngine.Graphics.Vulkan.Helpers;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
@@ -6,36 +7,37 @@ namespace VKEngine.Graphics.Vulkan;
 
 internal sealed class VulkanPipelineFactory(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IPipelineFactory
 {
-    public IPipeline CreateGraphicsPipeline(PipelineSpecification specification, params IDescriptorSet[] descriptorSets)
+    public IPipeline CreateGraphicsPipeline(PipelineDescription pipelineDescription)
     {
-        var vulkanPipeline = new VulkanPipeline(graphicsConfiguration, logicalDevice, swapChain, specification);
-        vulkanPipeline.Initialize(descriptorSets);
-        return vulkanPipeline;
-    }
-}
-
-internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain, PipelineSpecification specification, params IDescriptorSet[] descriptorSets) : IPipeline
-{
-    internal VkPipeline pipeline;
-    internal VkPipelineLayout pipelineLayout;
-
-    internal unsafe void Initialize(IDescriptorSet[] descriptorSets)
-    {
-        if (specification.Shader is not VulkanShader shader)
-        {
-            throw new InvalidOperationException("Invalid shader type!");
-        }
-
         if (swapChain is not VulkanSwapChain vulkanSwapChain)
         {
             throw new InvalidOperationException("Invalid swap chain type!");
         }
 
-        if (specification.RenderPass is not VulkanRenderPass renderPass)
+        if (pipelineDescription.Shader is not VulkanShader vulkanShader)
+        {
+            throw new InvalidOperationException("Invalid shader type!");
+        }
+
+        if (pipelineDescription.RenderPass is not VulkanRenderPass vulkanRenderPass)
         {
             throw new InvalidOperationException("Invalid render pass type!");
         }
 
+        var vulkanPipeline = new VulkanPipeline(graphicsConfiguration, logicalDevice);
+        vulkanPipeline.Initialize(pipelineDescription, vulkanSwapChain, vulkanShader, vulkanRenderPass);
+        return vulkanPipeline;
+    }
+}
+
+internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice) : IPipeline
+{
+    internal VkPipeline pipeline;
+    internal VkPipelineLayout pipelineLayout;
+
+    internal unsafe void Initialize(PipelineDescription description, VulkanSwapChain swapChain, VulkanShader shader, VulkanRenderPass renderPass)
+    {
+        // SHADERS
         var shaderModules = shader.GetShaderModules().ToArray();
 
         var pipelineShaderStageCreateInfo = stackalloc VkPipelineShaderStageCreateInfo[shaderModules.Length];
@@ -47,76 +49,50 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
             pipelineShaderStageCreateInfo[i].pName = Strings.main;
         }
 
-        var vertexInputBindingDescription = new VkVertexInputBindingDescription
-        {
-            binding = specification.PipelineLayout.binding,
-            stride = specification.PipelineLayout.stride,
-            inputRate = (VkVertexInputRate)specification.PipelineLayout.inputRate
-        };
-
-        var vertexInputAttributeDescriptions = specification.PipelineLayout.vertexAttributes.Select(x => new VkVertexInputAttributeDescription
-        {
-            binding = x.binding,
-            location = x.location,
-            format = (VkFormat)x.format,
-            offset = x.offset
-        }).ToArray();
-
-        //var vertexInputAttributeDescriptions = stackalloc VkVertexInputAttributeDescription[specification.PipelineLayout.vertexAttributes.Length];
-        //for (int i = 0; i < specification.PipelineLayout.vertexAttributes.Length; i++)
-        //{
-        //    vertexInputAttributeDescriptions[i] = new VkVertexInputAttributeDescription
-        //    {
-        //        binding = specification.PipelineLayout.vertexAttributes[i].binding,
-        //        location = specification.PipelineLayout.vertexAttributes[i].location,
-        //        format = (VkFormat)specification.PipelineLayout.vertexAttributes[i].format,
-        //        offset = specification.PipelineLayout.vertexAttributes[i].offset
-        //    };
-        //}
-
-        // DYNAMIC STATE
-        const int dynamicStateCount = 2;
-        var dynamicStates = stackalloc VkDynamicState[dynamicStateCount]
-        {
-            VkDynamicState.Viewport,
-            VkDynamicState.Scissor
-        };
-
-        var vkPipelineDynamicStateCreateInfo = VkPipelineDynamicStateCreateInfo.New();
-        vkPipelineDynamicStateCreateInfo.dynamicStateCount = (uint)dynamicStateCount;
-        vkPipelineDynamicStateCreateInfo.pDynamicStates = &dynamicStates[0];
-
         // VERTEX INPUT
-        var pipelineVertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.New();
-        pipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = 1;
-        pipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = &vertexInputBindingDescription;
+        var vertexInputBindingAndAttributes = VkVertexInputHelper.GetVertexInputBindingAndAttributeDescriptions(description.VertexLayouts).ToArray();
 
-        fixed (VkVertexInputAttributeDescription* pVertexInputAttributeDescriptions = &vertexInputAttributeDescriptions[0])
+        var vertexInputBindings = vertexInputBindingAndAttributes.Select(x => x.VertexInputBindingDescription).ToArray();
+        var vertexInputAttributes = vertexInputBindingAndAttributes.SelectMany(x => x.VertexInputAttributeDescriptions).ToArray();
+
+        var pipelineVertexInputStateCreateInfo = VkPipelineVertexInputStateCreateInfo.New();
+        fixed (VkVertexInputBindingDescription* pVertexInputBindingDescriptions = &vertexInputBindings[0])
         {
-            pipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = (uint)specification.PipelineLayout.vertexAttributes.Length;
+            pipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount = (uint)vertexInputBindings.Length;
+            pipelineVertexInputStateCreateInfo.pVertexBindingDescriptions = pVertexInputBindingDescriptions;
+        }
+        fixed (VkVertexInputAttributeDescription* pVertexInputAttributeDescriptions = &vertexInputAttributes[0])
+        {
+            pipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = (uint)vertexInputAttributes.Length;
             pipelineVertexInputStateCreateInfo.pVertexAttributeDescriptions = pVertexInputAttributeDescriptions;
         }
 
         // INPUT ASSEMBLY
         var pipelineInputAssemblyStateCreateInfo = VkPipelineInputAssemblyStateCreateInfo.New();
-        pipelineInputAssemblyStateCreateInfo.topology = VkPrimitiveTopology.TriangleList;
-        pipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = false;
+        pipelineInputAssemblyStateCreateInfo.topology = (VkPrimitiveTopology)description.PrimitiveTopology;
+        pipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = description.PrimitiveRestartEnable;
 
         // VIEWPORT AND SCISSOR
-        VkViewport viewport = new VkViewport
+        var extent = new VkExtent2D
+        {
+            width = swapChain.extent.width,
+            height = swapChain.extent.height
+        };
+
+        var viewport = new VkViewport
         {
             x = 0.0f,
             y = 0.0f,
-            width = vulkanSwapChain.extent.width,
-            height = vulkanSwapChain.extent.height,
+            width = extent.width,
+            height = extent.height,
             minDepth = 0.0f,
             maxDepth = 1.0f
         };
 
-        VkRect2D scissor = new()
+        var scissor = new VkRect2D
         {
             offset = VkOffset2D.Zero,
-            extent = vulkanSwapChain.extent
+            extent = extent
         };
 
         var pipelineViewportStateCreateInfo = VkPipelineViewportStateCreateInfo.New();
@@ -131,8 +107,8 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
         pipelineRasterizationStateCreateInfo.rasterizerDiscardEnable = false;
         pipelineRasterizationStateCreateInfo.polygonMode = VkPolygonMode.Fill;
         pipelineRasterizationStateCreateInfo.lineWidth = 1.0f;
-        pipelineRasterizationStateCreateInfo.cullMode = (VkCullModeFlags)specification.CullMode;
-        pipelineRasterizationStateCreateInfo.frontFace = (VkFrontFace)specification.FrontFace;
+        pipelineRasterizationStateCreateInfo.cullMode = (VkCullModeFlags)description.CullMode;
+        pipelineRasterizationStateCreateInfo.frontFace = (VkFrontFace)description.FrontFace;
         pipelineRasterizationStateCreateInfo.depthBiasEnable = false;
         pipelineRasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;
         pipelineRasterizationStateCreateInfo.depthBiasClamp = 0.0f;
@@ -173,29 +149,24 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
         pipelineColorBlendStateCreateInfo.blendConstants_2 = 0.0f;
         pipelineColorBlendStateCreateInfo.blendConstants_3 = 0.0f;
 
-        // PIPELINE LAYOUT
+        // DYNAMIC STATE
+        const int dynamicStateCount = 2;
+        var dynamicStates = stackalloc VkDynamicState[dynamicStateCount]
         {
-            var descriptorSetLayouts = descriptorSets.OfType<VulkanDescriptorSet>().Select(x => x.descriptorSetLayout).ToArray();
+            VkDynamicState.Viewport,
+            VkDynamicState.Scissor
+        };
 
-            VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.New();
-            fixed (VkDescriptorSetLayout* pDescriptorSetLayouts = &descriptorSetLayouts[0])
-            {
-                pipelineLayoutCreateInfo.setLayoutCount = (uint)descriptorSetLayouts.Length;
-                pipelineLayoutCreateInfo.pSetLayouts = pDescriptorSetLayouts;
-            }
-            pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-            pipelineLayoutCreateInfo.pPushConstantRanges = null;
+        var pipelineDynamicStateCreateInfo = VkPipelineDynamicStateCreateInfo.New();
+        pipelineDynamicStateCreateInfo.dynamicStateCount = (uint)dynamicStateCount;
+        pipelineDynamicStateCreateInfo.pDynamicStates = &dynamicStates[0];
 
-            if (vkCreatePipelineLayout(logicalDevice.Device, &pipelineLayoutCreateInfo, null, out pipelineLayout) is not VkResult.Success)
-            {
-                throw new InvalidOperationException("Failed to create pipeline layout!");
-            }
-        }
+        // PIPELINE LAYOUT
+        CreatePipelineLayout(description.DescriptorSets);
 
         var graphicsPipelineCreateInfo = VkGraphicsPipelineCreateInfo.New();
         graphicsPipelineCreateInfo.stageCount = (uint)shaderModules.Length;
-        graphicsPipelineCreateInfo.pStages = &pipelineShaderStageCreateInfo[0];
-        graphicsPipelineCreateInfo.pDynamicState = &vkPipelineDynamicStateCreateInfo;
+        graphicsPipelineCreateInfo.pStages = pipelineShaderStageCreateInfo;
         graphicsPipelineCreateInfo.pVertexInputState = &pipelineVertexInputStateCreateInfo;
         graphicsPipelineCreateInfo.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo;
         graphicsPipelineCreateInfo.pViewportState = &pipelineViewportStateCreateInfo;
@@ -203,6 +174,7 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
         graphicsPipelineCreateInfo.pMultisampleState = &pipelineMultisampleStateCreateInfo;
         graphicsPipelineCreateInfo.pDepthStencilState = null;
         graphicsPipelineCreateInfo.pColorBlendState = &pipelineColorBlendStateCreateInfo;
+        graphicsPipelineCreateInfo.pDynamicState = &pipelineDynamicStateCreateInfo;
         graphicsPipelineCreateInfo.layout = pipelineLayout;
 
         graphicsPipelineCreateInfo.renderPass = renderPass.renderPass;
@@ -213,6 +185,28 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
         if (vkCreateGraphicsPipelines(logicalDevice.Device, VkPipelineCache.Null, 1u, &graphicsPipelineCreateInfo, null, out pipeline) is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to create graphics pipeline!");
+        }
+    }
+
+    private unsafe void CreatePipelineLayout(IEnumerable<IDescriptorSet> descriptorSets)
+    {
+        {
+            var descriptorSetLayouts = descriptorSets.OfType<VulkanDescriptorSet>().Select(x => x.descriptorSetLayout).ToArray();
+            var pushConstantRanges = stackalloc VkPushConstantRange[0];
+
+            VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.New();
+            fixed (VkDescriptorSetLayout* pDescriptorSetLayouts = &descriptorSetLayouts[0])
+            {
+                pipelineLayoutCreateInfo.setLayoutCount = (uint)descriptorSetLayouts.Length;
+                pipelineLayoutCreateInfo.pSetLayouts = pDescriptorSetLayouts;
+            }
+            pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+            pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges;
+
+            if (vkCreatePipelineLayout(logicalDevice.Device, &pipelineLayoutCreateInfo, null, out pipelineLayout) is not VkResult.Success)
+            {
+                throw new InvalidOperationException("Failed to create pipeline layout!");
+            }
         }
     }
 

@@ -133,7 +133,7 @@ internal sealed class VulkanImage(IVulkanPhysicalDevice physicalDevice, IVulkanL
             throw new InvalidOperationException("Failed to allocate command buffer!");
         }
 
-        commandBuffer.Begin(Enumerations.CommandBufferUsageFlags.OneTimeSubmit);
+        commandBuffer.Begin(CommandBufferUsageFlags.OneTimeSubmit);
 
         VkImageMemoryBarrier barrier = VkImageMemoryBarrier.New();
         barrier.oldLayout = oldLayout;
