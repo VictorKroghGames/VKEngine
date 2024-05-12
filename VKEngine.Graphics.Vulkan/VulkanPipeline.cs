@@ -1,4 +1,5 @@
-﻿using VKEngine.Configuration;
+﻿using System.Runtime.CompilerServices;
+using VKEngine.Configuration;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
@@ -6,6 +7,13 @@ namespace VKEngine.Graphics.Vulkan;
 
 internal sealed class VulkanPipelineFactory(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IPipelineFactory
 {
+    public IPipeline CreateGraphicsPipeline(PipelineDescription description)
+    {
+        var vulkanPipeline = new VulkanPipeline(graphicsConfiguration, logicalDevice, swapChain, default!);
+        vulkanPipeline.Initialize(description);
+        return vulkanPipeline;
+    }
+
     public IPipeline CreateGraphicsPipeline(PipelineSpecification specification, params IDescriptorSet[] descriptorSets)
     {
         var vulkanPipeline = new VulkanPipeline(graphicsConfiguration, logicalDevice, swapChain, specification);
@@ -18,6 +26,42 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
 {
     internal VkPipeline pipeline;
     internal VkPipelineLayout pipelineLayout;
+
+    internal unsafe void Initialize(PipelineDescription description)
+    {
+        var (vertexInputAttributeDescriptions, vertexInputBindingDescription) = GenerateVertexInputAttributeDescription(description.VertexLayout);
+
+
+    }
+
+    private (VkVertexInputAttributeDescription[], VkVertexInputBindingDescription) GenerateVertexInputAttributeDescription(VertexLayoutDescription vertexLayoutDescription)
+    {
+        var vertexInputAttributeDescriptions = new VkVertexInputAttributeDescription[vertexLayoutDescription.Elements.Length];
+
+        var offset = 0u;
+        for (int i = 0; i < vertexLayoutDescription.Elements.Length; i++)
+        {
+            vertexInputAttributeDescriptions[i] = new VkVertexInputAttributeDescription
+            {
+                binding = vertexLayoutDescription.Binding,
+                location = (uint)i,
+                format = (VkFormat)vertexLayoutDescription.Elements[i].Format,
+                offset = offset
+            };
+
+            offset += (uint)Unsafe.SizeOf<float>();
+        }
+
+        var vertexInputBindingDescription = new VkVertexInputBindingDescription
+        {
+            binding = vertexLayoutDescription.Binding,
+            stride = offset,
+            inputRate = VkVertexInputRate.Vertex
+        };
+
+
+        return (vertexInputAttributeDescriptions, vertexInputBindingDescription);
+    }
 
     internal unsafe void Initialize(IDescriptorSet[] descriptorSets)
     {

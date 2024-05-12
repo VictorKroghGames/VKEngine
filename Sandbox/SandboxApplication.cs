@@ -81,7 +81,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         var texture = textureFactory.CreateTextureFromFilePath(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg"));
 
-        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, texture);
+        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, imGuiRenderer.FontTexture); // , texture
 
         var pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
         {

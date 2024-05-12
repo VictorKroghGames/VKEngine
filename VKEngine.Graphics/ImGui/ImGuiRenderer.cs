@@ -2,12 +2,15 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using VKEngine.Configuration;
+using VKEngine.Graphics.Enumerations;
 using static ImGuiNET.ImGui;
 
 namespace VKEngine.Graphics.ImGui;
 
 public interface IImGuiRenderer
 {
+    ITexture FontTexture { get; }
+
     void Initialize();
     void Cleanup();
 
@@ -15,11 +18,18 @@ public interface IImGuiRenderer
     void End();
 }
 
-internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, IShaderFactory shaderFactory, IPipelineFactory pipelineFactory, IBufferFactory bufferFactory) : IImGuiRenderer
+internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, IShaderFactory shaderFactory, IPipelineFactory pipelineFactory, IBufferFactory bufferFactory, ITextureFactory textureFactory) : IImGuiRenderer
 {
-    private IPipeline pipeline;
-    private IBuffer vertexBuffer;
-    private IBuffer indexBuffer;
+    private struct ProjectionMatrixBuffer
+    {
+        Matrix4x4 projection_matrix;
+    };
+
+    private IBuffer vertexBuffer = default!;
+    private IBuffer indexBuffer = default!;
+    private ITexture fontTexture = default!;
+    private IBuffer uniformBuffer = default!;
+    private IShader shader = default!;
 
     private ulong vertexBufferSize;
     private uint indexBufferSize;
@@ -29,6 +39,8 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
     private bool frameBegun = false;
     private Vector2 scaleFactor = Vector2.One;
     private static int sizeOfImDrawVert = Unsafe.SizeOf<ImDrawVert>();
+
+    public ITexture FontTexture => fontTexture;
 
     public void Initialize()
     {
@@ -48,6 +60,13 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
 
     public void Cleanup()
     {
+        DestroyContext();
+
+        vertexBuffer.Cleanup();
+        indexBuffer.Cleanup();
+        fontTexture.Cleanup();
+        uniformBuffer.Cleanup();
+        shader.Cleanup();
     }
 
     public void Begin()
@@ -102,7 +121,6 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
 
     public void Shutdown()
     {
-        DestroyContext();
     }
 
     public void DrawDemoWindow()
@@ -115,22 +133,39 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
         vertexBufferSize = 10000;
         indexBufferSize = 2000;
 
-        var shader = shaderFactory.CreateShader("ImGui",
-            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "shaders", "imgui.vert.spv"), ShaderModuleType.Vertex),
-            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "shaders", "imgui.frag.spv"), ShaderModuleType.Fragment)
+        vertexBuffer = bufferFactory.CreateVertexBuffer(vertexBufferSize);
+        indexBuffer = bufferFactory.CreateIndexBuffer(indexBufferSize);
+
+        RecreateFontDeviceTexture();
+
+        uniformBuffer = bufferFactory.CreateUniformBuffer<ProjectionMatrixBuffer>();
+
+        shader = shaderFactory.CreateShader("khronos_vulkan_vertex_buffer",
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.vert.spv"), ShaderModuleType.Vertex),
+            new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.frag.spv"), ShaderModuleType.Fragment)
         );
 
-        pipeline = pipelineFactory.CreateGraphicsPipeline(new PipelineSpecification
+        var vertexLayout = new VertexLayoutDescription(binding: 0u,
+            new VertexLayoutElementDescription("in_position",   Format.R32g32Sfloat),
+            new VertexLayoutElementDescription("in_texCoord",   Format.R32g32Sfloat),
+            new VertexLayoutElementDescription("in_color",      Format.R8g8b8a8Snorm)
+        );
+
+        var pipelineSpecification = new PipelineDescription
         {
-            PipelineLayout = new PipelineLayout(0, (uint)sizeOfImDrawVert, VertexInputRate.Vertex,
-                new PipelineLayoutVertexAttribute(0, 1, Format.R32g32Sfloat, 0),            // position
-                new PipelineLayoutVertexAttribute(0, 2, Format.R32g32Sfloat, 0),            // uv
-                new PipelineLayoutVertexAttribute(0, 3, Format.R32g32b32a32Sfloat, 0)       // color
-            ),
+            VertexLayout = vertexLayout,
             Shader = shader
-        });
-        vertexBuffer = bufferFactory.CreateVertexBuffer(vertexBufferSize);
-        indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(indexBufferSize);
+        };
+    }
+
+    private void RecreateFontDeviceTexture()
+    {
+        var io = GetIO();
+        io.Fonts.GetTexDataAsRGBA32(out IntPtr pixels, out int width, out int height, out int bytesPerPixel);
+
+        fontTexture = textureFactory.CreateTextureFromMemory(width, height, pixels, (uint)(width * height * bytesPerPixel));
+
+        io.Fonts.SetTexID(1);
     }
 
     private void SetPerFrameImGuiData(float deltaTime)
