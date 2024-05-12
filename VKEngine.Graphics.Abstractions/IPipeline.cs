@@ -36,6 +36,9 @@ public readonly struct PipelineSpecification
 
 public interface IPipelineFactory
 {
+    IPipeline CreateGraphicsPipeline(PipelineDescription pipelineDescription);
+
+    [Obsolete(error: true, message: "Use CreateGraphicsPipeline(PipelineDescription) instead.")]
     IPipeline CreateGraphicsPipeline(PipelineSpecification specification, params IDescriptorSet[] descriptorSets);
 }
 
