@@ -42,9 +42,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
 
         renderer.Initialize();
 
-        var renderPass = renderPassFactory.CreateRenderPass();
-
-        swapChain.Initialize(renderPass);
+        swapChain.Initialize();
 
         shaderLibrary.Load("khronos_vulkan_vertex_buffer",
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.vert.spv"), ShaderModuleType.Vertex),
@@ -88,8 +86,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             PrimitiveTopology = PrimitiveTopology.TriangleList,
             CullMode = CullMode.Back,
             FrontFace = FrontFace.CounterClockwise,
-            DescriptorSets = [descriptorSet],
-            RenderPass = renderPass
+            DescriptorSets = [descriptorSet]
         });
 
         var vertexBuffer = bufferFactory.CreateVertexBuffer((ulong)(4 * Unsafe.SizeOf<Vertex>()));
@@ -131,7 +128,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
             }
 
             renderer.BeginFrame();
-            renderer.Draw(renderPass, pipeline, vertexBuffer, indexBuffer, descriptorSet);
+            renderer.Draw(swapChain.RenderPass, pipeline, vertexBuffer, indexBuffer, descriptorSet);
             renderer.EndFrame();
 
             renderer.Render();
@@ -152,8 +149,6 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         descriptorSet.Cleanup();
 
         pipeline.Cleanup();
-
-        renderPass.Cleanup();
 
         swapChain.Cleanup();
 

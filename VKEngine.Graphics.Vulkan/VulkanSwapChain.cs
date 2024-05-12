@@ -5,7 +5,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWindow window, IGraphicsContext graphicsContext, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice) : ISwapChain
+internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfiguration, IWindow window, IGraphicsContext graphicsContext, IVulkanPhysicalDevice physicalDevice, IVulkanLogicalDevice logicalDevice, IRenderPassFactory renderPassFactory) : ISwapChain
 {
     internal VkSurfaceKHR surface = VkSurfaceKHR.Null;
     internal VkSwapchainKHR swapchain = VkSwapchainKHR.Null;
@@ -26,24 +26,20 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
     private uint imageCount = 0;
     internal uint imageIndex = 0;
 
-    private VulkanRenderPass vulkanRenderPass;
     private VkSurfaceFormatKHR[] supportedSurfaceFormats = [];
     private VkPresentModeKHR[] supportedPresentModes = [];
 
-    public uint CurrentFrameIndex => currentFrameIndex;
+    private IRenderPass renderPass = default!;
 
-    public void Initialize(IRenderPass renderPass)
+    public uint CurrentFrameIndex => currentFrameIndex;
+    public IRenderPass RenderPass => renderPass;
+
+    public void Initialize()
     {
         if (graphicsContext is not IVulkanGraphicsContext vulkanGraphicsContext)
         {
             throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanGraphicsContext!");
         }
-
-        if (renderPass is not VulkanRenderPass vulkanRenderPass)
-        {
-            throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanRenderPass!");
-        }
-        this.vulkanRenderPass = vulkanRenderPass;
 
         CreateSurface(vulkanGraphicsContext);
 
@@ -59,7 +55,9 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         presentMode = ChooseSwapPresentMode();
         extent = ChooseSwapExtent();
 
-        CreateSwapChain(vulkanRenderPass);
+        renderPass = renderPassFactory.CreateRenderPass((Format)surfaceFormat.format);
+
+        CreateSwapChain();
 
         CreateSynchronizationObjects(logicalDevice);
     }
@@ -84,6 +82,8 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         {
             throw new InvalidCastException("VulkanSwapChain can only be used with IVulkanGraphicsContext!");
         }
+
+        renderPass.Cleanup();
 
         vkDestroySurfaceKHR(vulkanGraphicsContext.Instance.Handle, surface, nint.Zero);
     }
@@ -123,7 +123,7 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         surface = new VkSurfaceKHR((ulong)surfacePtr.ToInt64());
     }
 
-    private unsafe void CreateSwapChain(VulkanRenderPass renderPass)
+    private unsafe void CreateSwapChain()
     {
         imageCount = surfaceCapabilities.minImageCount + 1;
         if (surfaceCapabilities.maxImageCount > 0 && imageCount > surfaceCapabilities.maxImageCount)
@@ -209,7 +209,7 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         for (var i = 0; i < swapChainImageCount; i++)
         {
             var framebufferCreateInfo = VkFramebufferCreateInfo.New();
-            framebufferCreateInfo.renderPass = renderPass.renderPass;
+            framebufferCreateInfo.renderPass = (renderPass as VulkanRenderPass)!.renderPass;
             framebufferCreateInfo.attachmentCount = 1;
             fixed (VkImageView* pImageView = &imageViews[i])
             {
@@ -382,7 +382,7 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         if (result is VkResult.ErrorOutOfDateKHR || result is VkResult.SuboptimalKHR)
         {
             CleanupSwapChain();
-            CreateSwapChain(vulkanRenderPass);
+            CreateSwapChain();
             return;
         }
 
@@ -420,7 +420,7 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         if (result is VkResult.ErrorOutOfDateKHR || result is VkResult.SuboptimalKHR)
         {
             CleanupSwapChain();
-            CreateSwapChain(vulkanRenderPass);
+            CreateSwapChain();
             return;
         }
 

@@ -22,7 +22,4 @@ public readonly struct PipelineDescription
 
     // PIPELINE LAYOUT
     public readonly IDescriptorSet[] DescriptorSets { get; init; }
-
-    // RENDER PASS
-    public readonly IRenderPass RenderPass { get; init; }
 }

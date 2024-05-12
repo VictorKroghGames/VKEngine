@@ -3,30 +3,25 @@ using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
 
-internal sealed class VulkanRenderPassFactory(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IRenderPassFactory
+internal sealed class VulkanRenderPassFactory(IVulkanLogicalDevice logicalDevice) : IRenderPassFactory
 {
-    public IRenderPass CreateRenderPass()
+    public IRenderPass CreateRenderPass(Format surfaceFormat)
     {
-        var renderPass = new VulkanRenderPass(logicalDevice, swapChain);
-        renderPass.Initialize();
+        var renderPass = new VulkanRenderPass(logicalDevice);
+        renderPass.Initialize(surfaceFormat);
         return renderPass;
     }
 }
 
-internal sealed class VulkanRenderPass(IVulkanLogicalDevice logicalDevice, ISwapChain swapChain) : IRenderPass
+internal sealed class VulkanRenderPass(IVulkanLogicalDevice logicalDevice) : IRenderPass
 {
     internal VkRenderPass renderPass;
 
-    internal unsafe void Initialize()
+    internal unsafe void Initialize(Format surfaceFormat)
     {
-        if (swapChain is not VulkanSwapChain vulkanSwapChain)
-        {
-            throw new InvalidOperationException("Invalid swap chain type!");
-        }
-
         var attachmentDescription = new VkAttachmentDescription
         {
-            format = VkFormat.B8g8r8a8Unorm, // vulkanSwapChain.surfaceFormat.format,
+            format = (VkFormat)surfaceFormat,
             samples = VkSampleCountFlags.Count1,
             loadOp = VkAttachmentLoadOp.Clear,
             storeOp = VkAttachmentStoreOp.Store,
