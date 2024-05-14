@@ -5,7 +5,7 @@ using VKEngine;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventDispatcher, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -39,6 +39,7 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         thread.Start();
 
         window.Initialize();
+        window.SetEventCallback(OnEvent);
 
         renderer.Initialize();
 
@@ -157,6 +158,32 @@ internal sealed class SandboxApplication(IWindow window, IInput input, IShaderLi
         renderer.Cleanup();
 
         thread.Join();
+    }
+
+    private void OnEvent(IEvent e)
+    {
+        eventDispatcher.Dispatch<WindowCloseEvent>(e, OnWindowCloseEventFunc);
+        eventDispatcher.Dispatch<KeyPressedEvent>(e, OnKeyPressedEventFunc);
+        eventDispatcher.Dispatch<KeyReleasedEvent>(e, OnKeyReleasedEventFunc);
+    }
+
+    private bool OnWindowCloseEventFunc(WindowCloseEvent windowCloseEvent)
+    {
+        Console.WriteLine("Window Close Event");
+        isRunning = false;
+        return true;
+    }
+
+    private bool OnKeyPressedEventFunc(KeyPressedEvent keyPressedEvent)
+    {
+        Console.WriteLine($"Key Pressed Event: {keyPressedEvent.KeyCode}");
+        return true;
+    }
+
+    private bool OnKeyReleasedEventFunc(KeyReleasedEvent keyReleasedEvent)
+    {
+        Console.WriteLine($"Key Released Event: {keyReleasedEvent.KeyCode}");
+        return true;
     }
 
     private void RenderThread()
