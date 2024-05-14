@@ -3,9 +3,14 @@ using VKEngine.Platform.Glfw.Native;
 
 namespace VKEngine.Platform.Glfw;
 
-internal sealed class GlfwWindow(IVKEngineConfiguration engineConfiguration, IPlatformConfiguration platformConfiguration) : IWindow
+internal sealed class WindowData
 {
-    internal IntPtr windowHandle;
+    internal EventCallbackFunction? callbackFunction;
+}
+
+internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfiguration, IPlatformConfiguration platformConfiguration) : IWindow
+{
+    private readonly WindowData data = new();
 
     public bool IsRunning => GLFW.WindowShouldClose(windowHandle) is false;
 
@@ -43,6 +48,11 @@ internal sealed class GlfwWindow(IVKEngineConfiguration engineConfiguration, IPl
 
     public void Shutdown()
     {
+    }
+
+    public void SetEventCallback(EventCallbackFunction eventCallback)
+    {
+        data.callbackFunction = eventCallback;
     }
 
     public void Dispose()
