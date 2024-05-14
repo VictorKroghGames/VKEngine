@@ -26,5 +26,5 @@ public struct GlfwNativeWindowHandle
     #endregion
 
     public static implicit operator IntPtr(GlfwNativeWindowHandle windowHandle) => windowHandle.WindowHandle;
-    public static implicit operator GlfwNativeWindowHandle(IntPtr windowHandle) => new GlfwNativeWindowHandle { WindowHandle = windowHandle };
+    public static implicit operator GlfwNativeWindowHandle(IntPtr windowHandle) => new() { WindowHandle = windowHandle };
 }
