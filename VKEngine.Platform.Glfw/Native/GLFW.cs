@@ -8,6 +8,10 @@ internal partial class GLFW
     internal const int GLFW_NO_API = 0;
     internal const int GLFW_TRUE = 1;
 
+    internal const int GLFW_PRESS = 1;
+    internal const int GLFW_RELEASE = 0;
+    internal const int GLFW_REPEAT = 2;
+
     public static bool Init() => Native.glfwInit();
     public static void Terminate() => Native.glfwTerminate();
 
@@ -25,4 +29,16 @@ internal partial class GLFW
     internal static void WindowHint(int hint, int value) => Native.glfwWindowHint(hint, value);
 
     public static int GetKey(IntPtr window, int key) => Native.glfwGetKey(window, key);
+
+    public static void SetWindowCloseCallback(ref GlfwNativeWindowHandle window, Callbacks.GLFWwindowclosefun cbfun)
+    {
+        window.WindowCloseEventFunc = cbfun;
+        Native.glfwSetWindowCloseCallback(window, window.WindowCloseEventFunc);
+    }
+
+    public static void SetKeyCallback(ref GlfwNativeWindowHandle window, Callbacks.GLFWkeyfun keyfun)
+    {
+        window.KeyEventFunc = keyfun;
+        Native.glfwSetKeyCallback(window, window.KeyEventFunc);
+    }
 }

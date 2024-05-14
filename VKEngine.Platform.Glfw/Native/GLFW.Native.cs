@@ -54,21 +54,14 @@ internal partial class GLFW
         [return: MarshalAs(UnmanagedType.I4)]
         internal static partial int glfwGetKey(IntPtr window, [MarshalAs(UnmanagedType.I4)] int key);
 
-        [LibraryImport(LibraryName, EntryPoint = "glfwGetRequiredInstanceExtensions")]
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetWindowCloseCallback")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial IntPtr glfwGetRequiredInstanceExtensions(out uint count);
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWwindowclosefun glfwSetWindowCloseCallback(IntPtr window, Callbacks.GLFWwindowclosefun cbfun);
 
-        [LibraryImport(LibraryName, EntryPoint = "glfwGetInstanceProcAddress")]
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetKeyCallback")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial IntPtr glfwGetInstanceProcAddress(IntPtr instance, [MarshalAs(UnmanagedType.LPStr)] string procName);
-
-        [LibraryImport(LibraryName, EntryPoint = "glfwGetPhysicalDevicePresentationSupport")]
-        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static partial bool glfwGetPhysicalDevicePresentationSupport(IntPtr instance, IntPtr device, uint queuefamily);
-
-        [LibraryImport(LibraryName, EntryPoint = "glfwCreateWindowSurface")]
-        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        public static partial void glfwCreateWindowSurface(IntPtr instance, IntPtr window, IntPtr allocator, out IntPtr surface);
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWkeyfun glfwSetKeyCallback(IntPtr window, Callbacks.GLFWkeyfun cbfun);
     }
 }
