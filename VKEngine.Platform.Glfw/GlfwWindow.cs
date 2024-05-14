@@ -10,6 +10,7 @@ internal sealed class WindowData
 
 internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfiguration, IPlatformConfiguration platformConfiguration) : IWindow
 {
+    internal GlfwNativeWindowHandle windowHandle = GlfwNativeWindowHandle.Null;
     private readonly WindowData data = new();
 
     public bool IsRunning => GLFW.WindowShouldClose(windowHandle) is false;
@@ -17,7 +18,7 @@ internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfigurat
     public int Width => platformConfiguration.WindowWidth;
     public int Height => platformConfiguration.WindowHeight;
 
-    public nint NativeWindowHandle => windowHandle;
+    public nint NativeWindowHandle => windowHandle.WindowHandle;
 
     public void Initialize()
     {
@@ -44,6 +45,10 @@ internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfigurat
         }
 
         GLFW.MakeContextCurrent(windowHandle);
+
+        GLFW.SetWindowCloseCallback(ref windowHandle, OnWindowClose);
+
+        GLFW.SetKeyCallback(ref windowHandle, OnKeyEvent);
     }
 
     public void Shutdown()
