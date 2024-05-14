@@ -15,30 +15,30 @@ internal partial class GLFW
     public static bool Init() => Native.glfwInit();
     public static void Terminate() => Native.glfwTerminate();
 
-    public static IntPtr CreateWindow(int width, int height, string title) => CreateWindow(width, height, title, IntPtr.Zero, IntPtr.Zero);
-    public static IntPtr CreateWindow(int width, int height, string title, IntPtr monitor, IntPtr share) => Native.glfwCreateWindow(width, height, title, monitor, share);
+    public static GlfwNativeWindowHandle CreateWindow(int width, int height, string title) => CreateWindow(width, height, title, IntPtr.Zero, IntPtr.Zero);
+    public static GlfwNativeWindowHandle CreateWindow(int width, int height, string title, IntPtr monitor, IntPtr share) => Native.glfwCreateWindow(width, height, title, monitor, share);
 
-    public static void MakeContextCurrent(IntPtr window) => Native.glfwMakeContextCurrent(window);
+    public static void MakeContextCurrent(GlfwNativeWindowHandle windowHandle) => Native.glfwMakeContextCurrent(windowHandle);
 
-    public static bool WindowShouldClose(IntPtr window) => Native.glfwWindowShouldClose(window);
+    public static bool WindowShouldClose(GlfwNativeWindowHandle windowHandle) => Native.glfwWindowShouldClose(windowHandle);
 
-    public static void SwapBuffers(IntPtr window) => Native.glfwSwapBuffers(window);
+    public static void SwapBuffers(GlfwNativeWindowHandle windowHandle) => Native.glfwSwapBuffers(windowHandle);
 
     public static void PollEvents() => Native.glfwPollEvents();
 
     internal static void WindowHint(int hint, int value) => Native.glfwWindowHint(hint, value);
 
-    public static int GetKey(IntPtr window, int key) => Native.glfwGetKey(window, key);
+    public static int GetKey(GlfwNativeWindowHandle windowHandle, int key) => Native.glfwGetKey(windowHandle, key);
 
-    public static void SetWindowCloseCallback(ref GlfwNativeWindowHandle window, Callbacks.GLFWwindowclosefun cbfun)
+    public static void SetWindowCloseCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowclosefun cbfun)
     {
-        window.WindowCloseEventFunc = cbfun;
-        Native.glfwSetWindowCloseCallback(window, window.WindowCloseEventFunc);
+        windowHandle.WindowCloseEventFunc = cbfun;
+        Native.glfwSetWindowCloseCallback(windowHandle, windowHandle.WindowCloseEventFunc);
     }
 
-    public static void SetKeyCallback(ref GlfwNativeWindowHandle window, Callbacks.GLFWkeyfun keyfun)
+    public static void SetKeyCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWkeyfun keyfun)
     {
-        window.KeyEventFunc = keyfun;
-        Native.glfwSetKeyCallback(window, window.KeyEventFunc);
+        windowHandle.KeyEventFunc = keyfun;
+        Native.glfwSetKeyCallback(windowHandle, windowHandle.KeyEventFunc);
     }
 }
