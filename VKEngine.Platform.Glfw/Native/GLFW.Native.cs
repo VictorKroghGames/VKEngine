@@ -62,7 +62,47 @@ internal partial class GLFW
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         internal static partial IntPtr glfwGetWindowUserPointer(IntPtr window);
 
-        // Window callbacks
+        // --------------------------------------------------------------------------------------------------
+        // Key callbacks
+        // --------------------------------------------------------------------------------------------------
+
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetKeyCallback")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWkeyfun glfwSetKeyCallback(IntPtr window, Callbacks.GLFWkeyfun cbfun);
+
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetCharCallback")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWcharfun glfwSetCharCallback(IntPtr window, Callbacks.GLFWcharfun charEventFunc);
+
+        // --------------------------------------------------------------------------------------------------
+        // Mouse/Cursor callbacks
+        // --------------------------------------------------------------------------------------------------
+
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetMouseButtonCallback")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWmousebuttonfun glfwSetMouseButtonCallback(IntPtr window, Callbacks.GLFWmousebuttonfun cbfun);
+
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetCursorPosCallback")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWcursorposfun glfwSetCursorPosCallback(IntPtr window, Callbacks.GLFWcursorposfun cbfun);
+
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetCursorEnterCallback")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWcursorenterfun glfwSetCursorEnterCallback(IntPtr window, Callbacks.GLFWcursorenterfun cbfun);
+
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetScrollCallback")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWscrollfun glfwSetScrollCallback(IntPtr window, Callbacks.GLFWscrollfun cbfun);
+
+        // --------------------------------------------------------------------------------------------------
+        // Windows callbacks
+        // --------------------------------------------------------------------------------------------------
 
         [LibraryImport(LibraryName, EntryPoint = "glfwSetWindowPosCallback")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
@@ -94,16 +134,14 @@ internal partial class GLFW
         [return: MarshalAs(UnmanagedType.FunctionPtr)]
         internal static partial Callbacks.GLFWwindowiconifyfun glfwSetWindowIconifyCallback(IntPtr window, Callbacks.GLFWwindowiconifyfun cbfun);
 
+        [LibraryImport(LibraryName, EntryPoint = "glfwSetWindowMaximizeCallback")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        [return: MarshalAs(UnmanagedType.FunctionPtr)]
+        internal static partial Callbacks.GLFWwindowmaximizefun glfwSetWindowMaximizeCallback(IntPtr window, Callbacks.GLFWwindowmaximizefun cbfun);
+
         [LibraryImport(LibraryName, EntryPoint = "glfwSetFramebufferSizeCallback")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         [return: MarshalAs(UnmanagedType.FunctionPtr)]
         internal static partial Callbacks.GLFWframebuffersizefun glfwSetFramebufferSizeCallback(IntPtr window, Callbacks.GLFWframebuffersizefun cbfun);
-
-        // Input callbacks
-
-        [LibraryImport(LibraryName, EntryPoint = "glfwSetKeyCallback")]
-        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-        [return: MarshalAs(UnmanagedType.FunctionPtr)]
-        internal static partial Callbacks.GLFWkeyfun glfwSetKeyCallback(IntPtr window, Callbacks.GLFWkeyfun cbfun);
     }
 }

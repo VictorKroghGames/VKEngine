@@ -51,11 +51,26 @@ internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfigurat
 
         GLFW.SetWindowUserPointer(windowHandle, ref data);
 
+        // Key events
+        GLFW.SetKeyCallback(ref windowHandle, Callbacks.OnKeyEvent);
+        GLFW.SetCharCallback(ref windowHandle, Callbacks.OnCharEvent);
+
+        // Mouse events
+        GLFW.SetMouseButtonCallback(ref windowHandle, Callbacks.OnMouseButtonEvent);
+        GLFW.SetCursorPosCallback(ref windowHandle, Callbacks.OnMousePositionEvent);
+        //GLFW.SetCursorEnterCallback(ref windowHandle, Callbacks.OnMouseEnterEvent);
+        GLFW.SetScrollCallback(ref windowHandle, Callbacks.OnMouseScrollEvent);
+
+        // Window events
+        // GLFW.SetWindowPosCallback(ref windowHandle, Callbacks.OnWindowMove);
         GLFW.SetWindowSizeCallback(ref windowHandle, Callbacks.OnWindowResize);
         GLFW.SetWindowCloseCallback(ref windowHandle, Callbacks.OnWindowClose);
+        //GLFW.SetWindowRefreshCallback(ref windowHandle, Callbacks.OnWindowRefresh);
         GLFW.SetWindowFocusCallback(ref windowHandle, Callbacks.OnWindowFocus);
-
-        GLFW.SetKeyCallback(ref windowHandle, Callbacks.OnKeyEvent);
+        GLFW.SetWindowIconifyCallback(ref windowHandle, Callbacks.OnWindowIconify);
+        GLFW.SetWindowMaximizeCallback(ref windowHandle, Callbacks.OnWindowMaximize);
+        //GLFW.SetFramebufferSizeCallback(ref windowHandle, Callbacks.OnFramebufferResize);
+        //GLFW.SetWindowContentScaleCallback(ref windowHandle, Callbacks.OnWindowContentScale);
     }
 
     public void SetEventCallback(EventCallbackFunction eventCallback)

@@ -50,7 +50,55 @@ internal partial class GLFW
 
     internal static IntPtr GetWindowUserPointerNative(GlfwNativeWindowHandle windowHandle) => Native.glfwGetWindowUserPointer(windowHandle);
 
-    // Window callbacks
+    // --------------------------------------------------------------------------------------------------
+    // Key callbacks
+    // --------------------------------------------------------------------------------------------------
+
+    internal static void SetKeyCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWkeyfun func)
+    {
+        windowHandle.KeyEventFunc = func;
+        Native.glfwSetKeyCallback(windowHandle, windowHandle.KeyEventFunc);
+    }
+
+    internal static void SetCharCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWcharfun func)
+    {
+        windowHandle.CharEventFunc = func;
+        Native.glfwSetCharCallback(windowHandle, windowHandle.CharEventFunc);
+    }
+
+    // --------------------------------------------------------------------------------------------------
+    // Mouse/Cursor callbacks
+    // --------------------------------------------------------------------------------------------------
+
+    internal static void SetMouseButtonCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWmousebuttonfun func)
+    {
+        windowHandle.MouseButtonEventFunc = func;
+        Native.glfwSetMouseButtonCallback(windowHandle, windowHandle.MouseButtonEventFunc);
+    }
+
+    internal static void SetCursorPosCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWcursorposfun func)
+    {
+        windowHandle.CursorPosEventFunc = func;
+        Native.glfwSetCursorPosCallback(windowHandle, windowHandle.CursorPosEventFunc);
+    }
+
+    internal static void SetCursorEnterCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWcursorenterfun func)
+    {
+        windowHandle.CursorEnterEventFunc = func;
+        Native.glfwSetCursorEnterCallback(windowHandle, windowHandle.CursorEnterEventFunc);
+    }
+
+    internal static void SetScrollCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWscrollfun func)
+    {
+        windowHandle.ScrollEventFunc = func;
+        Native.glfwSetScrollCallback(windowHandle, windowHandle.ScrollEventFunc);
+    }
+
+
+
+    // --------------------------------------------------------------------------------------------------
+    // Windows callbacks
+    // --------------------------------------------------------------------------------------------------
 
     internal static void SetWindowPosCallback(GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowposfun func)
     {
@@ -88,17 +136,15 @@ internal partial class GLFW
         Native.glfwSetWindowIconifyCallback(windowHandle, windowHandle.WindowIconifyEventFunc);
     }
 
+    internal static void SetWindowMaximizeCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowmaximizefun func)
+    {
+        windowHandle.WindowMaximizeEventFunc = func;
+        Native.glfwSetWindowMaximizeCallback(windowHandle, windowHandle.WindowMaximizeEventFunc);
+    }
+
     internal static void SetFramebufferSizeCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWframebuffersizefun func)
     {
         windowHandle.FramebufferSizeEventFunc = func;
         Native.glfwSetFramebufferSizeCallback(windowHandle, windowHandle.FramebufferSizeEventFunc);
-    }
-
-    // Key callbacks
-
-    internal static void SetKeyCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWkeyfun keyfun)
-    {
-        windowHandle.KeyEventFunc = keyfun;
-        Native.glfwSetKeyCallback(windowHandle, windowHandle.KeyEventFunc);
     }
 }

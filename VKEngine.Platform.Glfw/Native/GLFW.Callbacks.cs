@@ -31,6 +31,9 @@ internal partial class GLFW
         public delegate void GLFWwindowiconifyfun(IntPtr window, int iconified);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void GLFWwindowmaximizefun(IntPtr window, int maximized);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate void GLFWframebuffersizefun(IntPtr window, int width, int height);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]

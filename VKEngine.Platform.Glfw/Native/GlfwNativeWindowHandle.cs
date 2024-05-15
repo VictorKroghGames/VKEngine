@@ -15,18 +15,20 @@ public struct GlfwNativeWindowHandle
     internal GLFW.Callbacks.GLFWwindowrefreshfun WindowRefreshEventFunc { get; set; }
     internal GLFW.Callbacks.GLFWwindowfocusfun WindowFocusEventFunc { get; set; }
     internal GLFW.Callbacks.GLFWwindowiconifyfun WindowIconifyEventFunc { get; set; }
+    internal GLFW.Callbacks.GLFWwindowmaximizefun WindowMaximizeEventFunc { get; set; }
     internal GLFW.Callbacks.GLFWframebuffersizefun FramebufferSizeEventFunc { get; set; }
     #endregion
 
     #region Key callbacks
     internal GLFW.Callbacks.GLFWkeyfun KeyEventFunc { get; set; }
-    internal GLFW.Callbacks.GLFWcharfun KeyTypedFunc { get; set; }
+    internal GLFW.Callbacks.GLFWcharfun CharEventFunc { get; set; }
     #endregion
 
     #region Mouse callbacks
-    internal GLFW.Callbacks.GLFWscrollfun ScrollFunc { get; set; }
-    internal GLFW.Callbacks.GLFWcursorposfun MouseMovedFunc { get; set; }
-    internal GLFW.Callbacks.GLFWmousebuttonfun MouseButtonFunc { get; set; }
+    internal GLFW.Callbacks.GLFWmousebuttonfun MouseButtonEventFunc { get; set; }
+    internal GLFW.Callbacks.GLFWcursorposfun CursorPosEventFunc { get; set; }
+    internal GLFW.Callbacks.GLFWcursorenterfun CursorEnterEventFunc { get; set; }
+    internal GLFW.Callbacks.GLFWscrollfun ScrollEventFunc { get; set; }
     #endregion
 
     public static implicit operator IntPtr(GlfwNativeWindowHandle windowHandle) => windowHandle.WindowHandle;
