@@ -105,15 +105,15 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
 
         while (isRunning)
         {
-            if (input.IsKeyPressed(KeyCodes.A))
-            {
-                actionQueue.Enqueue(() => Console.WriteLine("Hello A from RenderThread (from GameLoop)!"));
-            }
+            //if (input.IsKeyPressed(KeyCodes.A))
+            //{
+            //    actionQueue.Enqueue(() => Console.WriteLine("Hello A from RenderThread (from GameLoop)!"));
+            //}
 
-            if (input.IsKeyPressed(KeyCodes.D))
-            {
-                actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
-            }
+            //if (input.IsKeyPressed(KeyCodes.D))
+            //{
+            //    actionQueue.Enqueue(() => Console.WriteLine("Hello D from RenderThread (from GameLoop)!"));
+            //}
 
             // Update uniform buffer
             {
@@ -162,6 +162,7 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
 
     private void OnEvent(IEvent e)
     {
+        Console.WriteLine($"Event: {e.GetType().Name}");
         eventDispatcher.Dispatch<WindowCloseEvent>(e, OnWindowCloseEventFunc);
         eventDispatcher.Dispatch<KeyPressedEvent>(e, OnKeyPressedEventFunc);
         eventDispatcher.Dispatch<KeyReleasedEvent>(e, OnKeyReleasedEventFunc);
@@ -169,7 +170,6 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
 
     private bool OnWindowCloseEventFunc(WindowCloseEvent windowCloseEvent)
     {
-        Console.WriteLine("Window Close Event");
         isRunning = false;
         return true;
     }

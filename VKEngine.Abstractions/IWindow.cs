@@ -12,7 +12,6 @@ public interface IWindow : IDisposable
     IntPtr NativeWindowHandle { get; }
 
     void Initialize();
-    void Shutdown();
 
     void SetEventCallback(EventCallbackFunction eventCallback);
 

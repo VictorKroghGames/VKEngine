@@ -9,9 +9,13 @@ public struct GlfwNativeWindowHandle
     internal GLFW.Callbacks.GLFWerrorfun GlfwErrorFunc { get; set; }
 
     #region Window callbacks
+    internal GLFW.Callbacks.GLFWwindowposfun WindowPosEventFunc { get; set; }
+    internal GLFW.Callbacks.GLFWwindowsizefun WindowSizeEventFunc { get; set; }
     internal GLFW.Callbacks.GLFWwindowclosefun WindowCloseEventFunc { get; set; }
+    internal GLFW.Callbacks.GLFWwindowrefreshfun WindowRefreshEventFunc { get; set; }
     internal GLFW.Callbacks.GLFWwindowfocusfun WindowFocusEventFunc { get; set; }
-    internal GLFW.Callbacks.GLFWwindowsizefun WindowResizeEventFunc { get; set; }
+    internal GLFW.Callbacks.GLFWwindowiconifyfun WindowIconifyEventFunc { get; set; }
+    internal GLFW.Callbacks.GLFWframebuffersizefun FramebufferSizeEventFunc { get; set; }
     #endregion
 
     #region Key callbacks

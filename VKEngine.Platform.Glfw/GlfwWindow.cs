@@ -1,17 +1,20 @@
-﻿using VKEngine.Configuration;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using VKEngine.Configuration;
 using VKEngine.Platform.Glfw.Native;
 
 namespace VKEngine.Platform.Glfw;
 
-internal sealed class WindowData
+internal class WindowData
 {
+    [MarshalAs(UnmanagedType.FunctionPtr)]
     internal EventCallbackFunction? callbackFunction;
 }
 
 internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfiguration, IPlatformConfiguration platformConfiguration) : IWindow
 {
     internal GlfwNativeWindowHandle windowHandle = GlfwNativeWindowHandle.Null;
-    private readonly WindowData data = new();
+    private WindowData data = new();
 
     public bool IsRunning => GLFW.WindowShouldClose(windowHandle) is false;
 
@@ -46,13 +49,13 @@ internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfigurat
 
         GLFW.MakeContextCurrent(windowHandle);
 
-        GLFW.SetWindowCloseCallback(ref windowHandle, OnWindowClose);
+        GLFW.SetWindowUserPointer(windowHandle, ref data);
 
-        GLFW.SetKeyCallback(ref windowHandle, OnKeyEvent);
-    }
+        GLFW.SetWindowSizeCallback(ref windowHandle, Callbacks.OnWindowResize);
+        GLFW.SetWindowCloseCallback(ref windowHandle, Callbacks.OnWindowClose);
+        GLFW.SetWindowFocusCallback(ref windowHandle, Callbacks.OnWindowFocus);
 
-    public void Shutdown()
-    {
+        GLFW.SetKeyCallback(ref windowHandle, Callbacks.OnKeyEvent);
     }
 
     public void SetEventCallback(EventCallbackFunction eventCallback)
@@ -62,16 +65,11 @@ internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfigurat
 
     public void Dispose()
     {
-        Shutdown();
-        // Destroy window
-
         GLFW.Terminate();
     }
 
     public void Update()
     {
-        //GLFW.SwapBuffers(windowHandle);
-
         GLFW.PollEvents();
     }
 }
