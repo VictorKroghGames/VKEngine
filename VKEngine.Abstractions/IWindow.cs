@@ -1,5 +1,7 @@
 ﻿namespace VKEngine;
 
+public delegate void EventCallbackFunction(IEvent e);
+
 public interface IWindow : IDisposable
 {
     bool IsRunning { get; }
@@ -10,6 +12,8 @@ public interface IWindow : IDisposable
     IntPtr NativeWindowHandle { get; }
 
     void Initialize();
-    void Shutdown();
+
+    void SetEventCallback(EventCallbackFunction eventCallback);
+
     void Update();
 }

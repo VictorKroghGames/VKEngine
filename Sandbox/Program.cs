@@ -17,6 +17,7 @@ builder.AddConfiguration<VKEngineConfiguration>(config =>
     {
     };
 });
+builder.AddEventSystem();
 builder.AddPlatformModule();
 builder.AddGraphicsModule();
 

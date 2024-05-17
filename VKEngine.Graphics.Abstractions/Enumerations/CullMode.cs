@@ -1,4 +1,4 @@
-﻿namespace VKEngine.Graphics.Enumerations;
+﻿namespace VKEngine.Graphics;
 
 public enum CullMode
 {

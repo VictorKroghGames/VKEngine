@@ -2,7 +2,7 @@
 
 public interface IRenderPassFactory
 {
-    IRenderPass CreateRenderPass();
+    IRenderPass CreateRenderPass(Format surfaceFormat);
 }
 
 public interface IRenderPass

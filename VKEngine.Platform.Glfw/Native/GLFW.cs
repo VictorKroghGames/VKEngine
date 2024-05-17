@@ -1,4 +1,6 @@
-﻿namespace VKEngine.Platform.Glfw.Native;
+﻿using System.Runtime.CompilerServices;
+
+namespace VKEngine.Platform.Glfw.Native;
 
 internal partial class GLFW
 {
@@ -8,21 +10,141 @@ internal partial class GLFW
     internal const int GLFW_NO_API = 0;
     internal const int GLFW_TRUE = 1;
 
-    public static bool Init() => Native.glfwInit();
-    public static void Terminate() => Native.glfwTerminate();
+    internal const int GLFW_PRESS = 1;
+    internal const int GLFW_RELEASE = 0;
+    internal const int GLFW_REPEAT = 2;
 
-    public static IntPtr CreateWindow(int width, int height, string title) => CreateWindow(width, height, title, IntPtr.Zero, IntPtr.Zero);
-    public static IntPtr CreateWindow(int width, int height, string title, IntPtr monitor, IntPtr share) => Native.glfwCreateWindow(width, height, title, monitor, share);
+    internal static bool Init() => Native.glfwInit();
+    internal static void Terminate() => Native.glfwTerminate();
 
-    public static void MakeContextCurrent(IntPtr window) => Native.glfwMakeContextCurrent(window);
+    internal static GlfwNativeWindowHandle CreateWindow(int width, int height, string title) => CreateWindow(width, height, title, IntPtr.Zero, IntPtr.Zero);
+    internal static GlfwNativeWindowHandle CreateWindow(int width, int height, string title, IntPtr monitor, IntPtr share) => Native.glfwCreateWindow(width, height, title, monitor, share);
 
-    public static bool WindowShouldClose(IntPtr window) => Native.glfwWindowShouldClose(window);
+    internal static void MakeContextCurrent(GlfwNativeWindowHandle windowHandle) => Native.glfwMakeContextCurrent(windowHandle);
 
-    public static void SwapBuffers(IntPtr window) => Native.glfwSwapBuffers(window);
+    internal static bool WindowShouldClose(GlfwNativeWindowHandle windowHandle) => Native.glfwWindowShouldClose(windowHandle);
 
-    public static void PollEvents() => Native.glfwPollEvents();
+    internal static void SwapBuffers(GlfwNativeWindowHandle windowHandle) => Native.glfwSwapBuffers(windowHandle);
+
+    internal static void PollEvents() => Native.glfwPollEvents();
 
     internal static void WindowHint(int hint, int value) => Native.glfwWindowHint(hint, value);
 
-    public static int GetKey(IntPtr window, int key) => Native.glfwGetKey(window, key);
+    internal static int GetKey(GlfwNativeWindowHandle windowHandle, int key) => Native.glfwGetKey(windowHandle, key);
+
+    internal unsafe static void SetWindowUserPointer<T>(GlfwNativeWindowHandle windowHandle, ref T data)
+    {
+        fixed (void* pData = &data)
+        {
+            SetWindowUserPointerNative(windowHandle, new nint(pData));
+        }
+    }
+
+    internal static void SetWindowUserPointerNative(GlfwNativeWindowHandle windowHandle, IntPtr pointer) => Native.glfwSetWindowUserPointer(windowHandle, pointer);
+
+    internal unsafe static T GetWindowUserPointer<T>(GlfwNativeWindowHandle windowHandle)
+    {
+        var userPointer = GetWindowUserPointerNative(windowHandle).ToPointer();
+        return *((T*)userPointer);
+    }
+
+    internal static IntPtr GetWindowUserPointerNative(GlfwNativeWindowHandle windowHandle) => Native.glfwGetWindowUserPointer(windowHandle);
+
+    // --------------------------------------------------------------------------------------------------
+    // Key callbacks
+    // --------------------------------------------------------------------------------------------------
+
+    internal static void SetKeyCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWkeyfun func)
+    {
+        windowHandle.KeyEventFunc = func;
+        Native.glfwSetKeyCallback(windowHandle, windowHandle.KeyEventFunc);
+    }
+
+    internal static void SetCharCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWcharfun func)
+    {
+        windowHandle.CharEventFunc = func;
+        Native.glfwSetCharCallback(windowHandle, windowHandle.CharEventFunc);
+    }
+
+    // --------------------------------------------------------------------------------------------------
+    // Mouse/Cursor callbacks
+    // --------------------------------------------------------------------------------------------------
+
+    internal static void SetMouseButtonCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWmousebuttonfun func)
+    {
+        windowHandle.MouseButtonEventFunc = func;
+        Native.glfwSetMouseButtonCallback(windowHandle, windowHandle.MouseButtonEventFunc);
+    }
+
+    internal static void SetCursorPosCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWcursorposfun func)
+    {
+        windowHandle.CursorPosEventFunc = func;
+        Native.glfwSetCursorPosCallback(windowHandle, windowHandle.CursorPosEventFunc);
+    }
+
+    internal static void SetCursorEnterCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWcursorenterfun func)
+    {
+        windowHandle.CursorEnterEventFunc = func;
+        Native.glfwSetCursorEnterCallback(windowHandle, windowHandle.CursorEnterEventFunc);
+    }
+
+    internal static void SetScrollCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWscrollfun func)
+    {
+        windowHandle.ScrollEventFunc = func;
+        Native.glfwSetScrollCallback(windowHandle, windowHandle.ScrollEventFunc);
+    }
+
+
+
+    // --------------------------------------------------------------------------------------------------
+    // Windows callbacks
+    // --------------------------------------------------------------------------------------------------
+
+    internal static void SetWindowPosCallback(GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowposfun func)
+    {
+        windowHandle.WindowPosEventFunc = func;
+        Native.glfwSetWindowPosCallback(windowHandle, windowHandle.WindowPosEventFunc);
+    }
+
+    internal static void SetWindowSizeCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowsizefun func)
+    {
+        windowHandle.WindowSizeEventFunc = func;
+        Native.glfwSetWindowSizeCallback(windowHandle, windowHandle.WindowSizeEventFunc);
+    }
+
+    internal static void SetWindowCloseCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowclosefun func)
+    {
+        windowHandle.WindowCloseEventFunc = func;
+        Native.glfwSetWindowCloseCallback(windowHandle, windowHandle.WindowCloseEventFunc);
+    }
+
+    internal static void SetWindowRefreshCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowrefreshfun func)
+    {
+        windowHandle.WindowRefreshEventFunc = func;
+        Native.glfwSetWindowRefreshCallback(windowHandle, windowHandle.WindowRefreshEventFunc);
+    }
+
+    internal static void SetWindowFocusCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowfocusfun func)
+    {
+        windowHandle.WindowFocusEventFunc = func;
+        Native.glfwSetWindowFocusCallback(windowHandle, windowHandle.WindowFocusEventFunc);
+    }
+
+    internal static void SetWindowIconifyCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowiconifyfun func)
+    {
+        windowHandle.WindowIconifyEventFunc = func;
+        Native.glfwSetWindowIconifyCallback(windowHandle, windowHandle.WindowIconifyEventFunc);
+    }
+
+    internal static void SetWindowMaximizeCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWwindowmaximizefun func)
+    {
+        windowHandle.WindowMaximizeEventFunc = func;
+        Native.glfwSetWindowMaximizeCallback(windowHandle, windowHandle.WindowMaximizeEventFunc);
+    }
+
+    internal static void SetFramebufferSizeCallback(ref GlfwNativeWindowHandle windowHandle, Callbacks.GLFWframebuffersizefun func)
+    {
+        windowHandle.FramebufferSizeEventFunc = func;
+        Native.glfwSetFramebufferSizeCallback(windowHandle, windowHandle.FramebufferSizeEventFunc);
+    }
 }
