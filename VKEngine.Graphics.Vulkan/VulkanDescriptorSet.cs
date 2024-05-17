@@ -7,25 +7,15 @@ namespace VKEngine.Graphics.Vulkan;
 
 internal sealed class VulkanDescriptorSetFactory(IGraphicsConfiguration graphicsConfiguration, IVulkanLogicalDevice logicalDevice) : IDescriptorSetFactory
 {
-    public IDescriptorSet CreateDescriptorSet<T>(IBuffer buffer, ITexture texture)
+    public IDescriptorSet CreateDescriptorSet(DescriptorSetDescription descriptorSetDescription)
     {
-        return CreateDescriptorSet<T>(graphicsConfiguration.FramesInFlight, buffer, texture);
+        return CreateDescriptorSet(1, descriptorSetDescription);
     }
 
-    public IDescriptorSet CreateDescriptorSet<T>(uint maxSets, IBuffer buffer, ITexture texture)
+    public IDescriptorSet CreateDescriptorSet(uint maxSets, DescriptorSetDescription descriptorSetDescription)
     {
-        if (buffer is not VulkanBuffer vulkanBuffer)
-        {
-            throw new InvalidOperationException("Invalid buffer type!");
-        }
-
-        if (texture is not VulkanTexture vulkanTexture)
-        {
-            throw new InvalidOperationException("Invalid texture type!");
-        }
-
         var descriptorSet = new VulkanDescriptorSet(graphicsConfiguration, logicalDevice);
-        descriptorSet.Initialize<T>(maxSets, vulkanBuffer, vulkanTexture);
+        descriptorSet.Initialize(maxSets, descriptorSetDescription);
         return descriptorSet;
     }
 }
@@ -34,37 +24,30 @@ internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfigu
 {
     private VkDescriptorPool descriptorPool = VkDescriptorPool.Null;
     internal VkDescriptorSetLayout descriptorSetLayout = VkDescriptorSetLayout.Null;
-    internal VkDescriptorSet[] descriptorSets = [];
+    internal VkDescriptorSet descriptorSet = VkDescriptorSet.Null;
 
-    internal unsafe void Initialize<T>(uint maxSets, VulkanBuffer vulkanBuffer, VulkanTexture vulkanTexture)
+    internal unsafe void Initialize(uint maxSets, DescriptorSetDescription descriptorSetDescription)
     {
         CreateDescriptorPool(maxSets);
 
-        var descriptorSetLayoutBindings = new VkDescriptorSetLayoutBinding[] {
-            new() {
-                binding = 0,
-                descriptorType = VkDescriptorType.UniformBuffer,
-                descriptorCount = 1,
-                stageFlags = VkShaderStageFlags.Vertex,
-                pImmutableSamplers = null
+        var descriptorSetLayoutBindings = descriptorSetDescription.DescriptorBindings.Select(x => new VkDescriptorSetLayoutBinding
+        {
+            binding = x.Binding,
+            descriptorType = x.DescriptorType switch
+            {
+                DescriptorType.UniformBuffer => VkDescriptorType.UniformBuffer,
+                DescriptorType.CombinedImageSampler => VkDescriptorType.CombinedImageSampler,
+                _ => throw new InvalidOperationException("Invalid descriptor type!")
             },
-            new() {
-                binding = 1,
-                descriptorType = VkDescriptorType.CombinedImageSampler,
-                descriptorCount = 1,
-                stageFlags = VkShaderStageFlags.Fragment,
-                pImmutableSamplers = null
-            }
-        };
-
-        //var descriptorSetLayoutBinding = new VkDescriptorSetLayoutBinding
-        //{
-        //    binding = 0,
-        //    descriptorType = VkDescriptorType.UniformBuffer,
-        //    descriptorCount = 1,
-        //    stageFlags = VkShaderStageFlags.Vertex,
-        //    pImmutableSamplers = null
-        //};
+            descriptorCount = x.DescriptorCount,
+            stageFlags = x.ShaderStageFlags switch
+            {
+                ShaderModuleType.Vertex => VkShaderStageFlags.Vertex,
+                ShaderModuleType.Fragment => VkShaderStageFlags.Fragment,
+                _ => throw new InvalidOperationException("Invalid shader stage flags!")
+            },
+            pImmutableSamplers = null
+        }).ToArray();
 
         var descriptorSetLayoutCreateInfo = VkDescriptorSetLayoutCreateInfo.New();
         fixed (VkDescriptorSetLayoutBinding* pDescriptorSetLayoutBindings = &descriptorSetLayoutBindings[0])
@@ -72,15 +55,17 @@ internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfigu
             descriptorSetLayoutCreateInfo.bindingCount = (uint)descriptorSetLayoutBindings.Length;
             descriptorSetLayoutCreateInfo.pBindings = pDescriptorSetLayoutBindings;
         }
-        //descriptorSetLayoutCreateInfo.bindingCount = 1;
-        //descriptorSetLayoutCreateInfo.pBindings = &descriptorSetLayoutBinding;
 
         if (vkCreateDescriptorSetLayout(logicalDevice.Device, &descriptorSetLayoutCreateInfo, null, out descriptorSetLayout) is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to create descriptor set layout!");
         }
 
-        var layouts = Enumerable.Range(0, (int)graphicsConfiguration.FramesInFlight).Select(x => descriptorSetLayout).ToArray();
+        AllocateDescriptorSet(descriptorSetLayout);
+    }
+
+    private unsafe void AllocateDescriptorSet(params VkDescriptorSetLayout[] layouts)
+    {
         VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = VkDescriptorSetAllocateInfo.New();
         descriptorSetAllocateInfo.descriptorPool = descriptorPool;
         descriptorSetAllocateInfo.descriptorSetCount = (uint)layouts.Length;
@@ -89,64 +74,64 @@ internal sealed class VulkanDescriptorSet(IGraphicsConfiguration graphicsConfigu
             descriptorSetAllocateInfo.pSetLayouts = pDescriptorSetLayout;
         }
 
-        descriptorSets = new VkDescriptorSet[graphicsConfiguration.FramesInFlight];
-        fixed (VkDescriptorSet* pDescriptorSets = &descriptorSets[0])
+        fixed (VkDescriptorSet* pDescriptorSets = &descriptorSet)
         {
             if (vkAllocateDescriptorSets(logicalDevice.Device, &descriptorSetAllocateInfo, pDescriptorSets) is not VkResult.Success)
             {
                 throw new InvalidOperationException("Failed to allocate descriptor set!");
             }
         }
+    }
 
-        for (int i = 0; i < graphicsConfiguration.FramesInFlight; i++)
+    public void Update<T>(uint binding, uint arrayElement, IBuffer buffer, ulong offset = 0)
+    {
+        var size = (ulong)Unsafe.SizeOf<T>();
+        Update(binding, arrayElement, buffer, size, offset);
+    }
+
+    public unsafe void Update(uint binding, uint arrayElement, IBuffer buffer, ulong size, ulong offset = 0)
+    {
+        if (buffer is not VulkanBuffer vulkanBuffer)
         {
-            var descriptorBufferInfo = new VkDescriptorBufferInfo
-            {
-                buffer = vulkanBuffer.buffer,
-                offset = 0,
-                range = (ulong)Unsafe.SizeOf<T>()
-            };
-
-            var descriptorImageInfo = vulkanTexture.GetDescriptorImageInfo();
-
-            var writeDescriptorSets = new VkWriteDescriptorSet[]
-            {
-                new()
-                {
-                    sType = VkStructureType.WriteDescriptorSet,
-                    dstSet = descriptorSets[i],
-                    dstBinding = 0,
-                    dstArrayElement = 0,
-                    descriptorType = VkDescriptorType.UniformBuffer,
-                    descriptorCount = 1,
-                    pBufferInfo = &descriptorBufferInfo
-                },
-                new()
-                {
-                    sType = VkStructureType.WriteDescriptorSet,
-                    dstSet = descriptorSets[i],
-                    dstBinding = 1,
-                    dstArrayElement = 0,
-                    descriptorType = VkDescriptorType.CombinedImageSampler,
-                    descriptorCount = 1,
-                    pImageInfo = &descriptorImageInfo
-                }
-            };
-
-            //VkWriteDescriptorSet writeDescriptorSet = VkWriteDescriptorSet.New();
-            //writeDescriptorSet.dstSet = descriptorSets[i];
-            //writeDescriptorSet.dstBinding = 0;
-            //writeDescriptorSet.dstArrayElement = 0;
-            //writeDescriptorSet.descriptorType = VkDescriptorType.UniformBuffer;
-            //writeDescriptorSet.descriptorCount = 1;
-            //writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
-
-            fixed (VkWriteDescriptorSet* writeDescriptorSet = &writeDescriptorSets[0])
-            {
-                vkUpdateDescriptorSets(logicalDevice.Device, (uint)writeDescriptorSets.Length, writeDescriptorSet, 0, null);
-            }
-            //vkUpdateDescriptorSets(logicalDevice.Device, writeDescriptorSets.Length, &writeDescriptorSet[0], 0, null);
+            throw new InvalidOperationException("Invalid buffer type!");
         }
+
+        var descriptorBufferInfo = new VkDescriptorBufferInfo
+        {
+            buffer = vulkanBuffer.buffer,
+            offset = offset,
+            range = size
+        };
+
+        var writeDescriptorSet = VkWriteDescriptorSet.New();
+        writeDescriptorSet.dstSet = descriptorSet;
+        writeDescriptorSet.dstBinding = binding;
+        writeDescriptorSet.descriptorType = VkDescriptorType.UniformBuffer;
+        writeDescriptorSet.dstArrayElement = arrayElement;
+        writeDescriptorSet.descriptorCount = 1;
+        writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
+
+        vkUpdateDescriptorSets(logicalDevice.Device, 1, &writeDescriptorSet, 0, null);
+    }
+
+    public unsafe void Update(uint binding, uint arrayElement, ITexture texture)
+    {
+        if(texture is not VulkanTexture vulkanTexture)
+        {
+            throw new InvalidOperationException("Invalid texture type!");
+        }
+
+        var descriptorImageInfo = vulkanTexture.GetDescriptorImageInfo();
+
+        var writeDescriptorSet = VkWriteDescriptorSet.New();
+        writeDescriptorSet.dstSet = descriptorSet;
+        writeDescriptorSet.dstBinding = binding;
+        writeDescriptorSet.descriptorType = VkDescriptorType.CombinedImageSampler;
+        writeDescriptorSet.dstArrayElement = arrayElement;
+        writeDescriptorSet.descriptorCount = 1;
+        writeDescriptorSet.pImageInfo = &descriptorImageInfo;
+
+        vkUpdateDescriptorSets(logicalDevice.Device, 1, &writeDescriptorSet, 0, null);
     }
 
     public void Cleanup()
