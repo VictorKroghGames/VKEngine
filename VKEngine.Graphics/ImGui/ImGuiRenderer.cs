@@ -2,7 +2,6 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using VKEngine.Configuration;
-using VKEngine.Graphics.Enumerations;
 using static ImGuiNET.ImGui;
 
 namespace VKEngine.Graphics.ImGui;
@@ -145,17 +144,17 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.frag.spv"), ShaderModuleType.Fragment)
         );
 
-        var vertexLayout = new VertexLayoutDescription(binding: 0u,
-            new VertexLayoutElementDescription("in_position",   Format.R32g32Sfloat),
-            new VertexLayoutElementDescription("in_texCoord",   Format.R32g32Sfloat),
-            new VertexLayoutElementDescription("in_color",      Format.R8g8b8a8Snorm)
-        );
+        //var vertexLayout = new VertexLayoutDescription(binding: 0u,
+        //    new VertexLayoutElementDescription("in_position",   Format.R32g32Sfloat),
+        //    new VertexLayoutElementDescription("in_texCoord",   Format.R32g32Sfloat),
+        //    new VertexLayoutElementDescription("in_color",      Format.R8g8b8a8Snorm)
+        //);
 
-        var pipelineSpecification = new PipelineDescription
-        {
-            VertexLayout = vertexLayout,
-            Shader = shader
-        };
+        //var pipelineSpecification = new PipelineDescription
+        //{
+        //    VertexLayout = vertexLayout,
+        //    Shader = shader
+        //};
     }
 
     private void RecreateFontDeviceTexture()

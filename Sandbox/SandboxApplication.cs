@@ -3,11 +3,10 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using VKEngine;
 using VKEngine.Graphics;
-using VKEngine.Graphics.Enumerations;
 using VKEngine.Graphics.ImGui;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventDispatcher, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
+internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventDispatcher, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory, IImGuiRenderer imGuiRenderer) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -47,7 +46,6 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
 
         imGuiRenderer.Initialize();
 
-        var renderPass = renderPassFactory.CreateRenderPass();
         swapChain.Initialize();
 
         shaderLibrary.Load("khronos_vulkan_vertex_buffer",
