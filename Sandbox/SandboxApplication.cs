@@ -72,7 +72,23 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
 
         var texture = textureFactory.CreateTextureFromFilePath(Path.Combine(AppContext.BaseDirectory, "Textures", "texture.jpg"));
 
-        var descriptorSet = descriptorSetFactory.CreateDescriptorSet<UniformBufferObject>(uniformBuffer, texture);
+        var descriptorSet = descriptorSetFactory.CreateDescriptorSet(new DescriptorSetDescription
+        {
+            DescriptorBindings = [
+                new DescriptorBinding {
+                    Binding = 0,
+                    DescriptorType = DescriptorType.UniformBuffer,
+                    DescriptorCount = 1,
+                    ShaderStageFlags = ShaderModuleType.Vertex
+                },
+                new DescriptorBinding {
+                    Binding = 1,
+                    DescriptorType = DescriptorType.CombinedImageSampler,
+                    DescriptorCount = 1,
+                    ShaderStageFlags = ShaderModuleType.Fragment
+                }
+            ]
+        });
 
         var vertexLayout = new VertexLayout(
             new VertexLayoutAttribute("inPosition", Format.R32g32Sfloat),
@@ -102,6 +118,9 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
         var indexBuffer = bufferFactory.CreateIndexBuffer<ushort>(6);
 
         indexBuffer.UploadData(new ushort[] { 0, 1, 2, 2, 3, 0 });
+
+        descriptorSet.Update<UniformBufferObject>(0, 0, uniformBuffer);
+        descriptorSet.Update(1, 0, texture);
 
         while (isRunning)
         {
