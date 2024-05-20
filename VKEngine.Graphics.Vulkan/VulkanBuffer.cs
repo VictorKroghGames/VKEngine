@@ -97,6 +97,33 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         throw new NotImplementedException();
     }
 
+    public unsafe void UploadData(uint offset, uint size, IntPtr data)
+    {
+        if (size > bufferSize)
+        {
+            throw new InvalidOperationException("Data size exceeds buffer size!");
+        }
+
+        if (useDirectUpload is true)
+        {
+            var offsetMappedMemory = Unsafe.Add<IntPtr>(mappedMemory.ToPointer(), (int)offset);
+            Unsafe.CopyBlock(offsetMappedMemory, data.ToPointer(), size);
+
+            return;
+        }
+
+        if (useStagingBuffer is true)
+        {
+            UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
+            {
+                var offsetMappedMemory = Unsafe.Add<IntPtr>(mappedMemory.ToPointer(), (int)offset);
+                Unsafe.CopyBlock(offsetMappedMemory, data.ToPointer(), size);
+            });
+
+            return;
+        }
+    }
+
     private unsafe void UploadDataUsingStagingBuffer<T>(ulong size, T data, Action<T, IntPtr> copyDataFunc)
     {
         if (useStagingBuffer is false)

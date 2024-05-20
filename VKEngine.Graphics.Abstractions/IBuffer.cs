@@ -18,4 +18,5 @@ public interface IBuffer
 
     void UploadData<T>(T[] data);
     void UploadData<T>(ref T data);
+    void UploadData(uint offset, uint size, IntPtr data);
 }
