@@ -18,4 +18,6 @@ public interface ICommandBuffer
 
     void Draw();
     void DrawIndex(uint indexCount);
+    void DrawIndexed(uint indexCount);
+    void DrawIndexed(uint indexCount, uint firstIndex, int vertexOffset);
 }

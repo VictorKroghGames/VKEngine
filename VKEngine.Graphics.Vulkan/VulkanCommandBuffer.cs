@@ -189,6 +189,18 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
     }
 
+    public void DrawIndexed(uint indexCount)
+    {
+        DrawIndexed(indexCount, 0, 0);
+    }
+
+    public void DrawIndexed(uint indexCount, uint firstIndex, int vertexOffset)
+    {
+        SetViewportAndScissor();
+
+        vkCmdDrawIndexed(commandBuffer, indexCount, 1, firstIndex, vertexOffset, 0);
+    }
+
     private unsafe void SetViewportAndScissor()
     {
         if (swapChain is not VulkanSwapChain vulkanSwapChain)
