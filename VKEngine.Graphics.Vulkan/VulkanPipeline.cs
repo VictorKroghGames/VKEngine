@@ -173,7 +173,9 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
         graphicsPipelineCreateInfo.pDynamicState = &pipelineDynamicStateCreateInfo;
         graphicsPipelineCreateInfo.layout = pipelineLayout;
 
-        graphicsPipelineCreateInfo.renderPass = (swapChain.RenderPass as VulkanRenderPass)!.renderPass;
+        var desiredRenderPass = (description.RenderPass ?? swapChain.RenderPass) as VulkanRenderPass ?? throw new InvalidOperationException("Invalid render pass type!");
+
+        graphicsPipelineCreateInfo.renderPass = desiredRenderPass.renderPass;
         graphicsPipelineCreateInfo.subpass = 0;
         graphicsPipelineCreateInfo.basePipelineHandle = VkPipeline.Null;
         graphicsPipelineCreateInfo.basePipelineIndex = -1;

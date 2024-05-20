@@ -5,6 +5,7 @@ public readonly struct PipelineDescription
     // LAYOUT
     public readonly IShader Shader { get; init; }
     public readonly VertexLayout[] VertexLayouts { get; init; }
+    public readonly IRenderPass? RenderPass { get; init; }
 
     // INPUT ASSEMBLY
     public readonly PrimitiveTopology PrimitiveTopology { get; init; }
