@@ -88,9 +88,14 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         vkDestroySurfaceKHR(vulkanGraphicsContext.Instance.Handle, surface, nint.Zero);
     }
 
-    private void CleanupSwapChain()
+    private unsafe void CleanupSwapChain()
     {
         vkDeviceWaitIdle(logicalDevice.Device);
+
+        fixed (VkFence* fences = &inFlightFences[0])
+        {
+            vkWaitForFences(logicalDevice.Device, (uint)inFlightFences.Length, fences, true, ulong.MaxValue);
+        }
 
         for (var i = 0; i < framebuffers.Length; i++)
         {
@@ -378,7 +383,7 @@ internal sealed class VulkanSwapChain(IGraphicsConfiguration graphicsConfigurati
         vkWaitForFences(logicalDevice.Device, 1, ref inFlightFences[currentFrameIndex], true, ulong.MaxValue);
         vkResetFences(logicalDevice.Device, 1, ref inFlightFences[currentFrameIndex]);
 
-        var result = vkAcquireNextImageKHR(logicalDevice.Device, swapchain, ulong.MaxValue, imageAvailableSemaphores[currentFrameIndex], VkFence.Null, ref imageIndex);
+        var result = vkAcquireNextImageKHR(logicalDevice.Device, swapchain, ulong.MaxValue, imageAvailableSemaphores[currentFrameIndex], inFlightFences[currentFrameIndex], ref imageIndex);
         if (result is VkResult.ErrorOutOfDateKHR || result is VkResult.SuboptimalKHR)
         {
             CleanupSwapChain();
