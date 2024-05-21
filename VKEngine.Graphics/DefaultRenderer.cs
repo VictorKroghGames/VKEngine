@@ -13,11 +13,11 @@ internal class DefaultRenderer(IGraphicsConfiguration graphicsConfiguration, IGr
         graphicsContext.Initialize();
         commandBufferAllocator.Initialize();
 
-        commandBuffers = new ICommandBuffer[graphicsConfiguration.FramesInFlight];
-        for (int i = 0; i < graphicsConfiguration.FramesInFlight; i++)
-        {
-            commandBuffers[i] = commandBufferAllocator.AllocateCommandBuffer();
-        }
+        //commandBuffers = new ICommandBuffer[graphicsConfiguration.FramesInFlight];
+        //for (int i = 0; i < graphicsConfiguration.FramesInFlight; i++)
+        //{
+        //    commandBuffers[i] = commandBufferAllocator.AllocateCommandBuffer();
+        //}
 
         //shaderLibrary.Load("shader",
         //    new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert.spv"), ShaderModuleType.Vertex),

@@ -14,6 +14,8 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
 
     public unsafe void Begin(CommandBufferUsageFlags flags = CommandBufferUsageFlags.None)
     {
+        logicalDevice.WaitIdle();
+
         if (vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags.None) is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to reset command buffer!");
@@ -65,7 +67,8 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
             submitInfo.pSignalSemaphores = signalSemaphorePtr;
         }
 
-        if (vkQueueSubmit(logicalDevice.GraphicsQueue, 1, &submitInfo, vulkanSwapChain.inFlightFences[vulkanSwapChain.CurrentFrameIndex]) is not VkResult.Success)
+        //if (vkQueueSubmit(logicalDevice.GraphicsQueue, 1, &submitInfo, vulkanSwapChain.inFlightFences[vulkanSwapChain.CurrentFrameIndex]) is not VkResult.Success)
+        if (vkQueueSubmit(logicalDevice.GraphicsQueue, 1, &submitInfo, VkFence.Null) is not VkResult.Success)
         {
             throw new InvalidOperationException("Failed to submit command buffer!");
         }

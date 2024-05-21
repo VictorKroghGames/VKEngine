@@ -44,9 +44,9 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
 
         renderer.Initialize();
 
-        imGuiRenderer.Initialize();
-
         swapChain.Initialize();
+
+        imGuiRenderer.Initialize();
 
         shaderLibrary.Load("khronos_vulkan_vertex_buffer",
             new ShaderModuleSpecification(Path.Combine(AppContext.BaseDirectory, "Shaders", "khronos_vulkan_vertex_buffer.vert.spv"), ShaderModuleType.Vertex),
@@ -166,11 +166,17 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
             //    uniformBuffer.UploadData(ref uniformBufferData);
             //}
 
-            renderer.BeginFrame();
-            renderer.Draw(swapChain.RenderPass, pipeline, vertexBuffer, indexBuffer, descriptorSet);
-            renderer.EndFrame();
+            //renderer.BeginFrame();
+            //renderer.Draw(swapChain.RenderPass, pipeline, vertexBuffer, indexBuffer, descriptorSet);
+            //renderer.EndFrame();
 
-            renderer.Render();
+            swapChain.AquireNextImage();
+
+            imGuiRenderer.Begin();
+            imGuiRenderer.DrawDemoWindow();
+            imGuiRenderer.End();
+
+            //renderer.Render();
             swapChain.Present();
 
             window.Update();

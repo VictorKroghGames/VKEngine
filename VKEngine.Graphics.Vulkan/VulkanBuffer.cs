@@ -33,6 +33,8 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
 
     public void Cleanup()
     {
+        logicalDevice.WaitIdle();
+
         vkDestroyBuffer(logicalDevice.Device, buffer, IntPtr.Zero);
         vkFreeMemory(logicalDevice.Device, deviceMemory, IntPtr.Zero);
     }
