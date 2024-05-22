@@ -228,11 +228,8 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
 
         renderPass = renderPassFactory.CreateRenderPass(Format.B8g8r8a8Unorm);
 
-        vertexBufferSize = 10000;
-        indexBufferSize = 2000;
-
-        vertexBuffer = bufferFactory.CreateVertexBuffer(vertexBufferSize);
-        indexBuffer = bufferFactory.CreateIndexBuffer(indexBufferSize);
+        vertexBuffer = bufferFactory.CreateVertexBuffer(8192);
+        indexBuffer = bufferFactory.CreateIndexBuffer(2048);
 
         RecreateFontDeviceTexture();
 
