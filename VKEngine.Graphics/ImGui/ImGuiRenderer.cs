@@ -194,7 +194,22 @@ internal sealed class ImGuiRenderer(IVKEngineConfiguration engineConfiguration, 
                     throw new Exception("User callback is not supported!");
                 }
 
-                //commandBuffer.DrawIndex(cmd.ElemCount);
+                if (cmd.TextureId != IntPtr.Zero)
+                {
+                    if (cmd.TextureId == fontAtlasId)
+                    {
+                        descriptorSet1.Update(1, 0, fontTexture);
+                    }
+                    else
+                    {
+                        throw new Exception("Unknown texture id!");
+                    }
+                }
+
+                var scissorRect = new Vector4(cmd.ClipRect.X, cmd.ClipRect.Y, (cmd.ClipRect.Z - cmd.ClipRect.X), (cmd.ClipRect.W - cmd.ClipRect.Y));
+
+                commandBuffer.SetScissor(scissorRect);
+
                 commandBuffer.DrawIndexed(cmd.ElemCount, cmd.IdxOffset + (uint)idx_offset, (int)cmd.VtxOffset + vtx_offset);
             }
 
