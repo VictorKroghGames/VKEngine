@@ -146,10 +146,10 @@ internal sealed class VulkanPipeline(IGraphicsConfiguration graphicsConfiguratio
         pipelineColorBlendStateCreateInfo.blendConstants_3 = 0.0f;
 
         // DYNAMIC STATE
-        const int dynamicStateCount = 2;
+        const int dynamicStateCount = 1;
         var dynamicStates = stackalloc VkDynamicState[dynamicStateCount]
         {
-            VkDynamicState.Viewport,
+            //VkDynamicState.Viewport,
             VkDynamicState.Scissor
         };
 
