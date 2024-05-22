@@ -108,8 +108,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
 
         if (useDirectUpload is true)
         {
-            var offsetMappedMemory = Unsafe.Add<IntPtr>(mappedMemory.ToPointer(), (int)offset);
-            Unsafe.CopyBlock(offsetMappedMemory, data.ToPointer(), size);
+            Unsafe.CopyBlock((void*)((ulong)mappedMemory.ToPointer() + offset), data.ToPointer(), size);
 
             return;
         }
@@ -118,8 +117,7 @@ internal sealed class VulkanBuffer(IVulkanPhysicalDevice physicalDevice, IVulkan
         {
             UploadDataUsingStagingBuffer(size, data, (data, mappedMemory) =>
             {
-                var offsetMappedMemory = Unsafe.Add<IntPtr>(mappedMemory.ToPointer(), (int)offset);
-                Unsafe.CopyBlock(offsetMappedMemory, data.ToPointer(), size);
+                Unsafe.CopyBlock((void*)((ulong)mappedMemory.ToPointer() + offset), data.ToPointer(), size);
             });
 
             return;
