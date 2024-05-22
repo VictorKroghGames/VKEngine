@@ -1,4 +1,6 @@
-﻿namespace VKEngine.Graphics;
+﻿using System.Numerics;
+
+namespace VKEngine.Graphics;
 
 public interface ICommandBuffer
 {
@@ -15,6 +17,8 @@ public interface ICommandBuffer
     void BindVertexBuffer(IBuffer buffer);
     void BindIndexBuffer(IBuffer buffer);
     void BindDescriptorSet(IPipeline pipeline, IDescriptorSet descriptorSet, uint set = 0);
+
+    void SetScissor(Vector4 scissor);
 
     void Draw();
     void DrawIndex(uint indexCount);

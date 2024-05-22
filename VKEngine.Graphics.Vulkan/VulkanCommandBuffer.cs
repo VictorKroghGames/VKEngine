@@ -1,4 +1,5 @@
-﻿using Vulkan;
+﻿using System.Numerics;
+using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKEngine.Graphics.Vulkan;
@@ -178,6 +179,17 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
         vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.Graphics, vulkanPipeline.pipelineLayout, set, 1, ref vulkanDescriptorSet.descriptorSet, 0, null);
     }
 
+    public unsafe void SetScissor(Vector4 scissor)
+    {
+        var scissorRect = new VkRect2D
+        {
+            offset = new VkOffset2D((int)scissor.X, (int)scissor.Y),
+            extent = new VkExtent2D((int)scissor.Z, (int)scissor.W)
+        };
+
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissorRect);
+    }
+
     public unsafe void Draw()
     {
         SetViewportAndScissor();
@@ -199,8 +211,6 @@ internal sealed class VulkanCommandBuffer(ICommandPool commandPool, VkCommandBuf
 
     public void DrawIndexed(uint indexCount, uint firstIndex, int vertexOffset)
     {
-        SetViewportAndScissor();
-
         vkCmdDrawIndexed(commandBuffer, indexCount, 1, firstIndex, vertexOffset, 0);
     }
 
