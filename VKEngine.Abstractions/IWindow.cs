@@ -10,6 +10,7 @@ public interface IWindow : IDisposable
     int Height { get; }
 
     IntPtr NativeWindowHandle { get; }
+    IntPtr NativeSurfaceHandle { get; }
 
     void Initialize();
 

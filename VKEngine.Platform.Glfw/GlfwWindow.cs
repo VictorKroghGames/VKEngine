@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using VKEngine.Configuration;
 using VKEngine.Platform.Glfw.Native;
 
@@ -11,9 +10,10 @@ internal class WindowData
     internal EventCallbackFunction? callbackFunction;
 }
 
-internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfiguration, IPlatformConfiguration platformConfiguration) : IWindow
+internal sealed partial class GlfwWindow(IPlatformConfiguration platformConfiguration) : IWindow
 {
     internal GlfwNativeWindowHandle windowHandle = GlfwNativeWindowHandle.Null;
+    private IntPtr surfaceHandle = IntPtr.Zero;
     private WindowData data = new();
 
     public bool IsRunning => GLFW.WindowShouldClose(windowHandle) is false;
@@ -22,6 +22,7 @@ internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfigurat
     public int Height => platformConfiguration.WindowHeight;
 
     public nint NativeWindowHandle => windowHandle.WindowHandle;
+    public nint NativeSurfaceHandle => throw new NotImplementedException();
 
     public void Initialize()
     {
@@ -31,7 +32,7 @@ internal sealed partial class GlfwWindow(IVKEngineConfiguration engineConfigurat
             return;
         }
 
-        CreateWindow(engineConfiguration.PlatformConfiguration);
+        CreateWindow(platformConfiguration);
     }
 
     private void CreateWindow(IPlatformConfiguration platformConfiguration)

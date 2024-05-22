@@ -8,6 +8,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddGlfwPlatformModule(this IServiceCollection services)
     {
+        services.AddScoped<IWindowFactory, GlfwWindowFactory>();
+
         services.AddScoped<IWindow, GlfwWindow>();
         services.AddScoped<IInput, GlfwInput>();
 

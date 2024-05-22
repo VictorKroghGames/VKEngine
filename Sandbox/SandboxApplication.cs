@@ -2,10 +2,11 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using VKEngine;
+using VKEngine.Configuration;
 using VKEngine.Graphics;
 using VKEngine.Platform;
 
-internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventDispatcher, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
+internal sealed class SandboxApplication(IVKEngineConfiguration engineConfiguration, IPlatformManager platformManager, IEventDispatcher eventDispatcher, IInput input, IShaderLibrary shaderLibrary, IRenderer renderer, ISwapChain swapChain, IPipelineFactory pipelineFactory, IRenderPassFactory renderPassFactory, IBufferFactory bufferFactory, IDescriptorSetFactory descriptorSetFactory, ITextureFactory textureFactory) : IApplication
 {
     private static ConcurrentQueue<Action> actionQueue = new();
 
@@ -27,11 +28,12 @@ internal sealed class SandboxApplication(IWindow window, IEventDispatcher eventD
 
     public void Dispose()
     {
-        window.Dispose();
     }
 
     public void Run()
     {
+        using var window = platformManager.CreateWindow(engineConfiguration.PlatformConfiguration);
+
         var thread = new Thread(RenderThread);
 
         actionQueue.Enqueue(() => Console.WriteLine("Hello world from RenderThread!"));
